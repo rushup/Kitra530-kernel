@@ -249,6 +249,12 @@
 			status = "okay";
 			#address-cells = <1>;
 			#size-cells = <0>;
+
+
+			lsm6dsl@6b {
+				compatible = "st,lsm6dsl";
+				reg = <0x6b>;
+			};
 		};
 
 		i2c_gpio3: i2c@3 {
@@ -631,6 +637,7 @@
 			default-state = "off";
 		};
 	};
+
 };
 
 &pwm {
