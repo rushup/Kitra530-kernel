@@ -33,10 +33,8 @@ sudo apt-get install android-tools-fsutils
 
 ### 2.2 Build the kernel
 
-
-+ For artik530>
 ```
-make ARCH=arm artik530_raptor_defconfig
+make ARCH=arm kitra530_defconfig
 ```
 If you want to change kernel configurations,
 ```
@@ -46,6 +44,7 @@ make ARCH=arm menuconfig
 ```
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- zImage -j4
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- dtbs
+yes | cp arch/arm/boot/dts/s5p4418-kitra530.dtb arch/arm/boot/dts/s5p4418-artik530-raptor-rev03.dtb
 mkdir usr/modules
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules -j4
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules_install INSTALL_MOD_PATH=usr/modules INSTALL_MOD_STRIP=1
