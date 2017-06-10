@@ -5,10 +5,7 @@
 3. [Update guide](#3-update-guide)
 
 ## 1. Introduction
-This 'linux-artik' repository is linux kernel source for artik5(artik520),
-artik10(artik1020), artik710 and artik530. The base kernel version of artik5
-and artik10 is linux-3.10.93 and based on Samsung Exynos kernel.
-The artik710 and artik530 kernel is based on is based on linux-4.4.19.
+Fork from 'linux-artik' repository adding Kitra530 support.
 
 ---
 ## 2. Build guide
