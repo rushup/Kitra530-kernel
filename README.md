@@ -7,7 +7,6 @@
 ## 1. Introduction
 Fork from 'linux-artik' repository adding Kitra530 support.
 
----
 ## 2. Build guide
 ### 2.1 Install cross compiler
 
@@ -37,6 +36,7 @@ If you want to change kernel configurations,
 ```
 make ARCH=arm menuconfig
 ```
+Run:
 
 ```
 ./mk_kernel.sh
@@ -47,7 +47,6 @@ make ARCH=arm menuconfig
 ## 3. Update Guide
 Copy compiled binaries into your board.
 
-+ For artik530>
 ```
 scp arch/arm/boot/zImage root@{YOUR_BOARD_IP}:/root
 scp arch/arm/boot/dts/s5p4418*.dtb root@{YOUR_BOARD_IP}:/root
