@@ -44,15 +44,9 @@ make ARCH=arm menuconfig
 ```
 
 ```
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- zImage -j4
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- dtbs
-mkdir usr/modules
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules -j4
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules_install INSTALL_MOD_PATH=usr/modules INSTALL_MOD_STRIP=1
-make_ext4fs -b 4096 -L modules \
-	-l 32M usr/modules.img \
-	usr/modules/lib/modules/
-rm -rf usr/modules
+./mk_kernel.sh
+./mk_dtb.sh
+./mk_modules.sh
 ```
 
 ## 3. Update Guide

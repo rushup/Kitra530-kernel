@@ -197,22 +197,32 @@
 			#address-cells = <0x1>;
 			#size-cells = <0x0>;
 
-			snps,phy-addr = <3>;
+			snps,phy-addr = <0>;
 			snps,reset-gpio = <&gpio_a 12 0>;
 			snps,reset-active-low;
 			snps,reset-delays-us = <0 10000 30000>;
+			phy-mode = "rmii";
+			
 
 			mdio {
 				#address-cells = <1>;
 				#size-cells = <0>;
 
-				ethernet_phy: ethernet-phy@3 {
-					reg = <3>;
-					fixed-link {
-						speed = <1000>;
-						full-duplex;
-					};
+				ethernet_phy: ethernet-phy@0 {
+					//compatible = "micrel,ksz8031";
+					micrel,rmii-reference-clock-select-25-mhz;
+					clocks = <&mdc>;
+					clock-names = "rmii-ref";
+					phy-handle = <&ethernet_phy>;
+					reg = <0>;
 				};
+
+			};
+
+			mdc: rmii-ref {
+				#clock-cells = <0>;
+				compatible ="fixed-clock";
+				clock-frequency = <50000000>;
 			};
 		};
 
@@ -250,11 +260,20 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
+			lsm303agr@1e {
+				compatible = "st,lsm303agr-magn";
+				reg = <0x1e>;
+				st,drdy-int-pin = <1>;
+			    interrupt-parent = <&gpio_a>;
+		        interrupts = <20 IRQ_TYPE_EDGE_RISING>;
+
+            };
 
 			lsm6dsl@6b {
 				compatible = "st,lsm6dsl";
 				reg = <0x6b>;
 			};
+
 		};
 
 		i2c_gpio3: i2c@3 {
