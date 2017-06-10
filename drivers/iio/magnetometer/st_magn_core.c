@@ -585,15 +585,11 @@ int st_magn_common_probe(struct iio_dev *indio_dev)
 
 	st_sensors_power_enable(indio_dev);
 
-	printk("MAGN CHECK DEVICE\n");
-
 	err = st_sensors_check_device_support(indio_dev,
 					ARRAY_SIZE(st_magn_sensors_settings),
 					st_magn_sensors_settings);
 	if (err < 0)
 		return err;
-
-	printk("MAGN CHECK DEVICE NO ERR\n");
 
 	mdata->num_data_channels = ST_MAGN_NUMBER_DATA_CHANNELS;
 	mdata->multiread_bit = mdata->sensor_settings->multi_read_bit;
@@ -604,13 +600,9 @@ int st_magn_common_probe(struct iio_dev *indio_dev)
 					&mdata->sensor_settings->fs.fs_avl[0];
 	mdata->odr = mdata->sensor_settings->odr.odr_avl[0].hz;
 
-	printk("MAGN SENSOR INI\n");
-
 	err = st_sensors_init_sensor(indio_dev, NULL);
 	if (err < 0)
 		return err;
-
-	printk("MAGN SENSOR INI NO ERR\n");
 
 	err = st_magn_allocate_ring(indio_dev);
 	if (err < 0)

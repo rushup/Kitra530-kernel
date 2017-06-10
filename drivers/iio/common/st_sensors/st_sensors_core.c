@@ -508,8 +508,6 @@ int st_sensors_check_device_support(struct iio_dev *indio_dev,
 	u8 wai;
 	struct st_sensor_data *sdata = iio_priv(indio_dev);
 
-	printk("MAGN passo\n");
-
 	for (i = 0; i < num_sensors_list; i++) {
 		for (n = 0; n < ST_SENSORS_MAX_4WAI; n++) {
 			if (strcmp(indio_dev->name,
@@ -521,8 +519,7 @@ int st_sensors_check_device_support(struct iio_dev *indio_dev,
 			break;
 	}
 	if (i == num_sensors_list) {
-		printk("MAGN ERR1\n");
-		printk("MAGN device name %s not recognized.\n",
+		dev_err(&indio_dev->dev, "device name %s not recognized.\n",
 							indio_dev->name);
 		return -ENODEV;
 	}
@@ -530,22 +527,18 @@ int st_sensors_check_device_support(struct iio_dev *indio_dev,
 	err = sdata->tf->read_byte(&sdata->tb, sdata->dev,
 					sensor_settings[i].wai_addr, &wai);
 	if (err < 0) {
-		printk("MAGN ERR2\n");
-		printk("MAGN failed to read Who-Am-I register.\n");
+		dev_err(&indio_dev->dev, "failed to read Who-Am-I register.\n");
 		return err;
 	}
 
 	if (sensor_settings[i].wai != wai) {
-		printk("MAGN ERR2\n");
-		printk("%s: MAGN WhoAmI mismatch (0x%x).\n",
+		dev_err(&indio_dev->dev, "%s: WhoAmI mismatch (0x%x).\n",
 						indio_dev->name, wai);
 		return -EINVAL;
 	}
 
 	sdata->sensor_settings =
 			(struct st_sensor_settings *)&sensor_settings[i];
-
-	printk("MAGN END\n");
 
 	return i;
 }
