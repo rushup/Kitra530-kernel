@@ -209,7 +209,6 @@
 				#size-cells = <0>;
 
 				ethernet_phy: ethernet-phy@0 {
-					//compatible = "micrel,ksz8031";
 					micrel,rmii-reference-clock-select-25-mhz;
 					clocks = <&mdc>;
 					clock-names = "rmii-ref";
@@ -260,12 +259,21 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			lsm303agr@1e {
+			lsm303agr_magn@1e {
 				compatible = "st,lsm303agr-magn";
 				reg = <0x1e>;
 				st,drdy-int-pin = <1>;
 			    interrupt-parent = <&gpio_a>;
 		        interrupts = <20 IRQ_TYPE_EDGE_RISING>;
+
+            };
+
+    		lsm303agr_accel@19 {
+				compatible = "st,lsm303agr-accel";
+				reg = <0x19>;
+				st,drdy-int-pin = <1>;
+			    interrupt-parent = <&gpio_a>;
+		        interrupts = <10 IRQ_TYPE_EDGE_RISING>;
 
             };
 
