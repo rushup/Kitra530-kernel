@@ -259,25 +259,36 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
+			lps22hb@5d {
+				compatible = "st,lps22hb-press";
+				reg = <0x5d>;
+				st,drdy-int-pin = <1>;
+				interrupt-parent = <&gpio_a>;
+				interrupts = <19 IRQ_TYPE_EDGE_RISING>;
+			};
+
 			lsm303agr_magn@1e {
 				compatible = "st,lsm303agr-magn";
 				reg = <0x1e>;
 				st,drdy-int-pin = <1>;
-				interrupt-parent = <&gpio_a>
+				interrupt-parent = <&gpio_a>;
 				interrupts = <20 IRQ_TYPE_EDGE_RISING>;
             };
 
 			lsm303agr_accel@19 {
 				compatible = "st,lsm303agr-accel";
 				reg = <0x19>;
-				st,drdy-int-pin = <1>
-				interrupt-parent = <&gpio_a>
+				st,drdy-int-pin = <1>;
+				interrupt-parent = <&gpio_a>;
 				interrupts = <10 IRQ_TYPE_EDGE_RISING>;
             };
 
 			lsm6dsl@6b {
 				compatible = "st,lsm6dsl";
 				reg = <0x6b>;
+				st,drdy-int-pin = <1>;
+				interrupt-parent = <&gpio_a>;
+				interrupts = <9 IRQ_TYPE_EDGE_RISING>;
 			};
 
 		};
