@@ -259,6 +259,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
+			lps22hb@5d {
+				compatible = "st,lps22hb-press";
+				reg = <0x5d>;
+				st,drdy-int-pin = <1>;
+				interrupt-parent = <&gpio_a>;
+				interrupts = <19 IRQ_TYPE_EDGE_RISING>;
+			};
+
 			lsm303agr_magn@1e {
 				compatible = "st,lsm303agr-magn";
 				reg = <0x1e>;
@@ -278,6 +286,9 @@
 			lsm6dsl@6b {
 				compatible = "st,lsm6dsl";
 				reg = <0x6b>;
+				st,drdy-int-pin = <1>;
+				interrupt-parent = <&gpio_a>;
+				interrupts = <9 IRQ_TYPE_EDGE_RISING>;
 			};
 
 		};

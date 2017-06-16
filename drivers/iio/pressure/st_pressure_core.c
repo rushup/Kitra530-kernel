@@ -109,6 +109,29 @@
 #define ST_PRESS_LPS25H_OUT_XL_ADDR		0x28
 #define ST_TEMP_LPS25H_OUT_L_ADDR		0x2b
 
+/* */
+
+/* CUSTOM VALUES FOR LPS22HB SENSOR */
+#define ST_PRESS_LPS22HB_LSB_PER_CELSIUS	100UL
+#define ST_PRESS_LPS22HB_WAI_EXP		0xb1 //
+#define ST_PRESS_LPS22HB_ODR_ADDR		0x10 //
+#define ST_PRESS_LPS22HB_ODR_MASK		0x70 //
+#define ST_PRESS_LPS22HB_ODR_AVL_1HZ_VAL	0x01 //
+#define ST_PRESS_LPS22HB_ODR_AVL_10HZ_VAL	0x02 //
+#define ST_PRESS_LPS22HB_ODR_AVL_25HZ_VAL	0x03 //
+#define ST_PRESS_LPS22HB_ODR_AVL_50HZ_VAL	0x04 //
+#define ST_PRESS_LPS22HB_ODR_AVL_75HZ_VAL	0x05 //
+#define ST_PRESS_LPS22HB_PW_ADDR		0x10 //
+#define ST_PRESS_LPS22HB_PW_MASK		0x70 //same as odr
+#define ST_PRESS_LPS22HB_BDU_ADDR		0x10 //
+#define ST_PRESS_LPS22HB_BDU_MASK		0x02 //
+#define ST_PRESS_LPS22HB_DRDY_IRQ_ADDR		0x12 //
+#define ST_PRESS_LPS22HB_DRDY_IRQ_INT1_MASK	0x04 //
+#define ST_PRESS_LPS22HB_DRDY_IRQ_INT2_MASK	0x10 //non esiste
+#define ST_PRESS_LPS22HB_MULTIREAD_BIT		true //
+#define ST_PRESS_LPS22HB_OUT_XL_ADDR		0x28 //
+#define ST_TEMP_LPS22HB_OUT_L_ADDR		0x2b //
+
 static const struct iio_chan_spec st_press_1_channels[] = {
 	{
 		.type = IIO_PRESSURE,
@@ -122,7 +145,8 @@ static const struct iio_chan_spec st_press_1_channels[] = {
 			.endianness = IIO_LE,
 		},
 		.info_mask_separate =
-			BIT(IIO_CHAN_INFO_RAW) | BIT(IIO_CHAN_INFO_SCALE),
+			BIT(IIO_CHAN_INFO_RAW) /*| BIT(IIO_CHAN_INFO_SCALE)*/,
+		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SAMP_FREQ),
 		.modified = 0,
 	},
 	{
@@ -137,9 +161,10 @@ static const struct iio_chan_spec st_press_1_channels[] = {
 			.endianness = IIO_LE,
 		},
 		.info_mask_separate =
-			BIT(IIO_CHAN_INFO_RAW) |
+			BIT(IIO_CHAN_INFO_RAW)/* |
 			BIT(IIO_CHAN_INFO_SCALE) |
-			BIT(IIO_CHAN_INFO_OFFSET),
+			BIT(IIO_CHAN_INFO_OFFSET)*/,
+		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SAMP_FREQ),
 		.modified = 0,
 	},
 	IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -328,6 +353,56 @@ static const struct st_sensor_settings st_press_sensors_settings[] = {
 		.multi_read_bit = ST_PRESS_LPS25H_MULTIREAD_BIT,
 		.bootime = 2,
 	},
+	{
+		.wai = ST_PRESS_LPS22HB_WAI_EXP,
+		.wai_addr = ST_SENSORS_DEFAULT_WAI_ADDRESS,
+		.sensors_supported = {
+			[0] = LPS22HB_PRESS_DEV_NAME,
+		},
+		.ch = (struct iio_chan_spec *)st_press_1_channels,
+		.num_ch = ARRAY_SIZE(st_press_1_channels),
+		.odr = {
+			.addr = ST_PRESS_LPS22HB_ODR_ADDR,
+			.mask = ST_PRESS_LPS22HB_ODR_MASK,
+			.odr_avl = {
+				{ 1, ST_PRESS_LPS22HB_ODR_AVL_1HZ_VAL, },
+				{ 10, ST_PRESS_LPS22HB_ODR_AVL_10HZ_VAL, },
+				{ 25, ST_PRESS_LPS22HB_ODR_AVL_25HZ_VAL, },
+				{ 50, ST_PRESS_LPS22HB_ODR_AVL_50HZ_VAL, },
+				{ 70, ST_PRESS_LPS22HB_ODR_AVL_75HZ_VAL, },
+			},
+		},
+		.pw = {
+			.addr = ST_PRESS_LPS22HB_PW_ADDR,
+			.mask = ST_PRESS_LPS22HB_PW_MASK,
+			.value_on = ST_SENSORS_DEFAULT_POWER_ON_VALUE,
+			.value_off = ST_SENSORS_DEFAULT_POWER_OFF_VALUE,
+		},
+		.fs = {
+			.fs_avl = {
+				/*
+				 * Pressure and temperature sensitivity values
+				 * as defined in table 3 of LPS25H datasheet.
+				 */
+				[0] = {
+					.num = ST_PRESS_FS_AVL_1260MB,
+					.gain = ST_PRESS_KPASCAL_NANO_SCALE,
+					.gain2 = ST_PRESS_LPS22HB_LSB_PER_CELSIUS,
+				},
+			},
+		},
+		.bdu = {
+			.addr = ST_PRESS_LPS22HB_BDU_ADDR,
+			.mask = ST_PRESS_LPS22HB_BDU_MASK,
+		},
+		.drdy_irq = {
+			.addr = ST_PRESS_LPS22HB_DRDY_IRQ_ADDR,
+			.mask_int1 = ST_PRESS_LPS22HB_DRDY_IRQ_INT1_MASK,
+			.mask_int2 = ST_PRESS_LPS22HB_DRDY_IRQ_INT2_MASK,
+		},
+		.multi_read_bit = ST_PRESS_LPS22HB_MULTIREAD_BIT,
+		.bootime = 2,
+	},
 };
 
 static int st_press_write_raw(struct iio_dev *indio_dev,
@@ -443,13 +518,22 @@ int st_press_common_probe(struct iio_dev *indio_dev)
 	indio_dev->info = &press_info;
 	mutex_init(&press_data->tb.buf_lock);
 
+	printk("STEP 2\r\n");
+
 	st_sensors_power_enable(indio_dev);
+
+	printk("STEP 3\r\n");
 
 	err = st_sensors_check_device_support(indio_dev,
 					ARRAY_SIZE(st_press_sensors_settings),
 					st_press_sensors_settings);
+
+	printk("STEP 4\r\n");
+
 	if (err < 0)
 		return err;
+
+	printk("STEP 5\r\n");
 
 	press_data->num_data_channels = ST_PRESS_NUMBER_DATA_CHANNELS;
 	press_data->multiread_bit = press_data->sensor_settings->multi_read_bit;

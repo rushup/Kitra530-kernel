@@ -250,16 +250,12 @@ static int gpio_led_probe(struct platform_device *pdev)
 	struct gpio_leds_priv *priv;
 	int i, ret = 0;
 
-	printk("kitra: STEP1");
-
 	if (pdata && pdata->num_leds) {
 		priv = devm_kzalloc(&pdev->dev,
 				sizeof_gpio_leds_priv(pdata->num_leds),
 					GFP_KERNEL);
-		printk("kitra: STEP2");
 		if (!priv)
 			return -ENOMEM;
-		printk("kitra: STEP3");
 		priv->num_leds = pdata->num_leds;
 		for (i = 0; i < priv->num_leds; i++) {
 			ret = create_gpio_led(&pdata->leds[i],

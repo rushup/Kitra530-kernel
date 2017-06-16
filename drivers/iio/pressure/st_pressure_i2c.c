@@ -32,6 +32,10 @@ static const struct of_device_id st_press_of_match[] = {
 		.compatible = "st,lps331ap-press",
 		.data = LPS331AP_PRESS_DEV_NAME,
 	},
+	{
+		.compatible = "st,lps22hb-press",
+		.data = LPS22HB_PRESS_DEV_NAME,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, st_press_of_match);
@@ -46,9 +50,16 @@ static int st_press_i2c_probe(struct i2c_client *client,
 	struct st_sensor_data *press_data;
 	int err;
 
+	printk("STEP 1 AA\r\n");
+
 	indio_dev = devm_iio_device_alloc(&client->dev, sizeof(*press_data));
+
+	printk("STEP 1B %d\r\n",indio_dev );
+
 	if (!indio_dev)
 		return -ENOMEM;
+
+	printk("STEP 11\r\n");
 
 	press_data = iio_priv(indio_dev);
 	st_sensors_of_i2c_probe(client, st_press_of_match);
@@ -56,8 +67,12 @@ static int st_press_i2c_probe(struct i2c_client *client,
 	st_sensors_i2c_configure(indio_dev, client, press_data);
 
 	err = st_press_common_probe(indio_dev);
+
+	printk("STEP 12\r\n");
 	if (err < 0)
 		return err;
+
+	printk("STEP 13\r\n");
 
 	return 0;
 }
@@ -73,6 +88,7 @@ static const struct i2c_device_id st_press_id_table[] = {
 	{ LPS001WP_PRESS_DEV_NAME },
 	{ LPS25H_PRESS_DEV_NAME },
 	{ LPS331AP_PRESS_DEV_NAME },
+	{ LPS22HB_PRESS_DEV_NAME },
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, st_press_id_table);
