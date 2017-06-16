@@ -263,15 +263,15 @@
 				compatible = "st,lsm303agr-magn";
 				reg = <0x1e>;
 				st,drdy-int-pin = <1>;
-				interrupt-parent = <&gpio_a>
+				interrupt-parent = <&gpio_a>;
 				interrupts = <20 IRQ_TYPE_EDGE_RISING>;
             };
 
 			lsm303agr_accel@19 {
 				compatible = "st,lsm303agr-accel";
 				reg = <0x19>;
-				st,drdy-int-pin = <1>
-				interrupt-parent = <&gpio_a>
+				st,drdy-int-pin = <1>;
+				interrupt-parent = <&gpio_a>;
 				interrupts = <10 IRQ_TYPE_EDGE_RISING>;
             };
 
