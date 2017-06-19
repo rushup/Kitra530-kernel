@@ -796,4 +796,13 @@ config INPUT_DRV2667_HAPTICS
 	  To compile this driver as a module, choose M here: the
 	  module will be called drv2667-haptics.
 
+config STMVL53L0X
+    tristate "STM VL53L0 Proximity support"
+    depends on I2C=y
+    default y
+    help
+      Say Y here if you want to use STMicroelectronics's proximity sensor
+      through I2C interface.
+
+
 endif

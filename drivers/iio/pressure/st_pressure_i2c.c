@@ -50,16 +50,10 @@ static int st_press_i2c_probe(struct i2c_client *client,
 	struct st_sensor_data *press_data;
 	int err;
 
-	printk("STEP 1 AA\r\n");
-
 	indio_dev = devm_iio_device_alloc(&client->dev, sizeof(*press_data));
-
-	printk("STEP 1B %d\r\n",indio_dev );
 
 	if (!indio_dev)
 		return -ENOMEM;
-
-	printk("STEP 11\r\n");
 
 	press_data = iio_priv(indio_dev);
 	st_sensors_of_i2c_probe(client, st_press_of_match);
@@ -68,11 +62,8 @@ static int st_press_i2c_probe(struct i2c_client *client,
 
 	err = st_press_common_probe(indio_dev);
 
-	printk("STEP 12\r\n");
 	if (err < 0)
 		return err;
-
-	printk("STEP 13\r\n");
 
 	return 0;
 }

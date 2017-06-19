@@ -518,22 +518,14 @@ int st_press_common_probe(struct iio_dev *indio_dev)
 	indio_dev->info = &press_info;
 	mutex_init(&press_data->tb.buf_lock);
 
-	printk("STEP 2\r\n");
-
 	st_sensors_power_enable(indio_dev);
-
-	printk("STEP 3\r\n");
 
 	err = st_sensors_check_device_support(indio_dev,
 					ARRAY_SIZE(st_press_sensors_settings),
 					st_press_sensors_settings);
 
-	printk("STEP 4\r\n");
-
 	if (err < 0)
 		return err;
-
-	printk("STEP 5\r\n");
 
 	press_data->num_data_channels = ST_PRESS_NUMBER_DATA_CHANNELS;
 	press_data->multiread_bit = press_data->sensor_settings->multi_read_bit;
