@@ -34,6 +34,7 @@
 
 #define	display_to_dpc(d)	(&d->ctrl.dpc)
 
+
 static int hdmi_hpd_status(void)
 {
 	return hdmi_read(HDMI_HPD_STATUS);

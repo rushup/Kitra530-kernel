@@ -31,70 +31,83 @@
 /*
  * HDMI preset configs
  */
+static const struct hdmi_preset hdmi_conf_800x480p60 = {
+		.mode = {
+				.pixelclock = 32000000,
+				.h_as = 800, .h_sw = 62, .h_bp = 60, .h_fp = 16, .h_si = 0,
+				.v_as = 480, .v_sw = 6, .v_bp = 30, .v_fp = 9, .v_si = 0,
+				.refresh = 66,
+				.name = "800x480p@66",
+				.flags = 0,
+		},
+
+};
+
+
 static const struct hdmi_preset hdmi_conf_480p60 = {
-	.mode = {
-		 .pixelclock = 27027000,
-		 .h_as = 720, .h_sw = 62, .h_bp = 60, .h_fp = 16, .h_si = 0,
-		 .v_as = 480, .v_sw = 6, .v_bp = 30, .v_fp = 9, .v_si = 0,
-		 .refresh = 60,
-		 .name = "720x480p@60",
-		 .flags = 0,
-		 },
-	.core = {
-		 .h_blank = {0x8a, 0x00},
-		 .v2_blank = {0x0d, 0x02},
-		 .v1_blank = {0x2d, 0x00},
-		 .v_line = {0x0d, 0x02},
-		 .h_line = {0x5a, 0x03},
-		 .hsync_pol = {0x01},
-		 .vsync_pol = {0x01},
-		 .int_pro_mode = {0x00},
-		 .v_blank_f0 = {0xff, 0xff},
-		 .v_blank_f1 = {0xff, 0xff},
-		 .h_sync_start = {0x0e, 0x00},
-		 .h_sync_end = {0x4c, 0x00},
-		 .v_sync_line_bef_2 = {0x0f, 0x00},
-		 .v_sync_line_bef_1 = {0x09, 0x00},
-		 .v_sync_line_aft_2 = {0xff, 0xff},
-		 .v_sync_line_aft_1 = {0xff, 0xff},
-		 .v_sync_line_aft_pxl_2 = {0xff, 0xff},
-		 .v_sync_line_aft_pxl_1 = {0xff, 0xff},
-		 .v_blank_f2 = {0xff, 0xff},
-		 .v_blank_f3 = {0xff, 0xff},
-		 .v_blank_f4 = {0xff, 0xff},
-		 .v_blank_f5 = {0xff, 0xff},
-		 .v_sync_line_aft_3 = {0xff, 0xff},
-		 .v_sync_line_aft_4 = {0xff, 0xff},
-		 .v_sync_line_aft_5 = {0xff, 0xff},
-		 .v_sync_line_aft_6 = {0xff, 0xff},
-		 .v_sync_line_aft_pxl_3 = {0xff, 0xff},
-		 .v_sync_line_aft_pxl_4 = {0xff, 0xff},
-		 .v_sync_line_aft_pxl_5 = {0xff, 0xff},
-		 .v_sync_line_aft_pxl_6 = {0xff, 0xff},
-		 .vact_space_1 = {0xff, 0xff},
-		 .vact_space_2 = {0xff, 0xff},
-		 .vact_space_3 = {0xff, 0xff},
-		 .vact_space_4 = {0xff, 0xff},
-		 .vact_space_5 = {0xff, 0xff},
-		 .vact_space_6 = {0xff, 0xff},
-		 /* other don't care */
-		 },
-	.tg = {
-	       0x00,		/* cmd */
-	       0x5a, 0x03,	/* h_fsz */
-	       0x8a, 0x00, 0xd0, 0x02,	/* hact */
-	       0x0d, 0x02,	/* v_fsz */
-	       0x01, 0x00, 0x33, 0x02,	/* vsync */
-	       0x2d, 0x00, 0xe0, 0x01,	/* vact */
-	       0x33, 0x02,	/* field_chg */
-	       0x48, 0x02,	/* vact_st2 */
-	       0x00, 0x00,	/* vact_st3 */
-	       0x00, 0x00,	/* vact_st4 */
-	       0x01, 0x00, 0x01, 0x00,	/* vsync top/bot */
-	       0x01, 0x00, 0x33, 0x02,	/* field top/bot */
-	       0x00,		/* 3d FP */
-	       },
-	.vic = 3,
+		.mode = {
+				.pixelclock = 27027000,
+				.h_as = 720, .h_sw = 62, .h_bp = 60, .h_fp = 16, .h_si = 0,
+				.v_as = 480, .v_sw = 6, .v_bp = 30, .v_fp = 9, .v_si = 0,
+				.refresh = 60,
+				.name = "720x480p@60",
+				.flags = 0,
+		},
+		.core = {
+				.h_blank = {0x8a, 0x00},
+				.v2_blank = {0x0d, 0x02},
+				.v1_blank = {0x2d, 0x00},
+				.v_line = {0x0d, 0x02},
+				.h_line = {0x5a, 0x03},
+				.hsync_pol = {0x01},
+				.vsync_pol = {0x01},
+				.int_pro_mode = {0x00},
+				.v_blank_f0 = {0xff, 0xff},
+				.v_blank_f1 = {0xff, 0xff},
+				.h_sync_start = {0x0e, 0x00},
+				.h_sync_end = {0x4c, 0x00},
+				.v_sync_line_bef_2 = {0x0f, 0x00},
+				.v_sync_line_bef_1 = {0x09, 0x00},
+				.v_sync_line_aft_2 = {0xff, 0xff},
+				.v_sync_line_aft_1 = {0xff, 0xff},
+				.v_sync_line_aft_pxl_2 = {0xff, 0xff},
+				.v_sync_line_aft_pxl_1 = {0xff, 0xff},
+				.v_blank_f2 = {0xff, 0xff},
+				.v_blank_f3 = {0xff, 0xff},
+				.v_blank_f4 = {0xff, 0xff},
+				.v_blank_f5 = {0xff, 0xff},
+				.v_sync_line_aft_3 = {0xff, 0xff},
+				.v_sync_line_aft_4 = {0xff, 0xff},
+				.v_sync_line_aft_5 = {0xff, 0xff},
+				.v_sync_line_aft_6 = {0xff, 0xff},
+				.v_sync_line_aft_pxl_3 = {0xff, 0xff},
+				.v_sync_line_aft_pxl_4 = {0xff, 0xff},
+				.v_sync_line_aft_pxl_5 = {0xff, 0xff},
+				.v_sync_line_aft_pxl_6 = {0xff, 0xff},
+				.vact_space_1 = {0xff, 0xff},
+				.vact_space_2 = {0xff, 0xff},
+				.vact_space_3 = {0xff, 0xff},
+				.vact_space_4 = {0xff, 0xff},
+				.vact_space_5 = {0xff, 0xff},
+				.vact_space_6 = {0xff, 0xff},
+				/* other don't care */
+		},
+		.tg = {
+				0x00,		/* cmd */
+				0x5a, 0x03,	/* h_fsz */
+				0x8a, 0x00, 0xd0, 0x02,	/* hact */
+				0x0d, 0x02,	/* v_fsz */
+				0x01, 0x00, 0x33, 0x02,	/* vsync */
+				0x2d, 0x00, 0xe0, 0x01,	/* vact */
+				0x33, 0x02,	/* field_chg */
+				0x48, 0x02,	/* vact_st2 */
+				0x00, 0x00,	/* vact_st3 */
+				0x00, 0x00,	/* vact_st4 */
+				0x01, 0x00, 0x01, 0x00,	/* vsync top/bot */
+				0x01, 0x00, 0x33, 0x02,	/* field top/bot */
+				0x00,		/* 3d FP */
+		},
+		.vic = 3,
 };
 
 static const struct hdmi_preset hdmi_conf_480p59_94 = {
@@ -2263,6 +2276,17 @@ static const struct hdmi_preset hdmi_conf_1080p30_tb = {
 	.vic = 34,
 };
 
+static const struct hdmi_preset hdmi_conf_1024p60 = {
+	.mode = {
+		 .pixelclock = 108000000,
+		 .h_as = 1280, .h_sw = 112, .h_bp = 248, .h_fp = 48, .h_si = 0,
+		 .v_as = 1024, .v_sw = 3, .v_bp = 38, .v_fp = 1, .v_si = 0,
+		 .refresh = 60,
+		 .name = "1280x1024p@60",
+		 .flags = 0,
+		 },
+};
+
 /*
  * PHY preset data tables
  */
@@ -2322,6 +2346,13 @@ static const u8 hdmiphy_preset_74_25[32] = {
 	0xa5, 0x24, 0x01, 0x00, 0x00, 0x01, 0x80, 0x10,
 };
 
+static const u8 hdmiphy_preset_108[32] = {
+	0x51, 0x2d, 0x15, 0x40, 0x01, 0x00, 0xc8, 0x82,
+	0xc8, 0x0e, 0xd9, 0x45, 0xa0, 0xac, 0x80, 0x08,
+	0x80, 0x09, 0x84, 0x05, 0x22, 0x24, 0x86, 0x54,
+	0xc7, 0x25, 0x03, 0x00, 0x00, 0x01, 0x80, 0x10,
+};
+
 static const u8 hdmiphy_preset_148_352[32] = {
 	0xd1, 0x1f, 0x00, 0x40, 0x5b, 0xef, 0xc8, 0x81,
 	0xe8, 0xb9, 0xd8, 0x45, 0xa0, 0xac, 0x80, 0x0a,
@@ -2368,6 +2399,13 @@ const struct hdmi_conf hdmi_conf[] = {
 	 .phy_data = hdmiphy_preset_27_027,
 	 .support = true,
 	},
+	{
+	 /* New: 800x480p@60 */
+	 .preset = &hdmi_conf_800x480p60,
+	 .format = &_format_2d,
+	 .phy_data = hdmiphy_preset_27,
+	 .support = true,
+	},
 	{ /* 2 : 720x576p@50 */
 	 .preset = &hdmi_conf_576p50,
 	 .format = &_format_2d,
@@ -2410,7 +2448,13 @@ const struct hdmi_conf hdmi_conf[] = {
 	 .phy_data = hdmiphy_preset_148_5,
 	 .support = true,
 	},
-	{ /*  : 1920x1080p@24 */
+	{ /* 9 : 1280x1024@60 */
+	 .preset = &hdmi_conf_1024p60,
+	 .format = &_format_2d,
+	 .phy_data = hdmiphy_preset_108,
+	 .support = true,
+	},
+	{ /* 10 : 1920x1080p@24 */
 	 .preset = &hdmi_conf_1080p24,
 	 .format = &_format_2d,
 	 .phy_data = hdmiphy_preset_74_25,

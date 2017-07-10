@@ -519,28 +519,9 @@
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "Artik530 raptor Audio";
 		simple-audio-card,mclk-fs = <256>;
-		simple-audio-card,widgets =
-		    "Headphone", "Out Jack",
-		    "Microphone", "In Jack";
-		simple-audio-card,routing =
-		    "Out Jack", "HPOL",
-		    "Out Jack", "HPOR",
-		    "IN2P", "In Jack",
-		    "IN2P", "In Jack";
 		status = "okay";
 
 		simple-audio-card,dai-link@0 {
-		    format = "i2s";
-		    cpu {
-			sound-dai = <&i2s_0 0>;
-		    };
-
-		    codec {
-			sound-dai = <&alc5658>;
-		    };
-		};
-
-		simple-audio-card,dai-link@1 {
 		    cpu {
 			sound-dai = <&spdif_tx 0>;
 		    };

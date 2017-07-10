@@ -38,6 +38,7 @@
 #include "nx_drm_fb.h"
 #include "soc/s5pxx18_dp_hdmi.h"
 
+
 struct hdmi_resource {
 	struct i2c_adapter *ddc_adpt;
 	const struct edid *edid;
@@ -101,7 +102,11 @@ static int panel_hdmi_preferred_modes(struct device *dev,
 	struct videomode *vm = &panel->vm;
 	struct drm_display_mode *t;
 	bool err = false;
-
+    if (vm->hactive == 0 && vm->vactive == 0){
+        vm->hactive= 800;
+        vm->vactive= 480;
+        panel->vrefresh = 66;
+    }
 	DRM_DEBUG_KMS("enter %d:%d:%d\n",
 		vm->hactive, vm->vactive, panel->vrefresh);
 
