@@ -644,13 +644,6 @@
 		status = "okay";
 	};
 
-	ledpwm: pwm@3 {
-		compatible = "pwm-gpio";
-		#pwm-cells = <3>;
-		pwm-gpios = <&gpio_a 14 0>, <&gpio_b 18 0>, <&gpio_b 11 0>;
-	};
-
-
 	leds {
 		compatible = "gpio-leds";
 		status = "okay";

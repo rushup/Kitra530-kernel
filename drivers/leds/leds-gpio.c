@@ -9,6 +9,8 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
+ * NOTE: This driver was modified by RushUp to handle led dimming with internal
+ * timer.
  */
 #include <linux/err.h>
 #include <linux/gpio.h>
@@ -21,6 +23,7 @@
 #include <linux/property.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
+#include <linux/hrtimer.h>
 
 struct gpio_led_data {
 	struct led_classdev cdev;
@@ -29,6 +32,9 @@ struct gpio_led_data {
 	u8 new_level;
 	u8 can_sleep;
 	u8 blinking;
+	struct hrtimer timer;
+	bool timer_start;
+	bool pin_on;
 	int (*platform_gpio_blink_set)(struct gpio_desc *desc, int state,
 			unsigned long *delay_on, unsigned long *delay_off);
 };
@@ -46,6 +52,40 @@ static void gpio_led_work(struct work_struct *work)
 		gpiod_set_value_cansleep(led_dat->gpiod, led_dat->new_level);
 }
 
+enum hrtimer_restart timer_callback( struct hrtimer *timer )
+{
+
+	u32 off_time;
+	u32 on_time;
+	struct gpio_led_data *gpio_data = container_of(timer,
+						       struct gpio_led_data,
+						       timer);
+
+	u32 tmp_newlevel;
+
+	tmp_newlevel = gpio_data->new_level;
+	if(tmp_newlevel <= 248) //prevent flicker
+		tmp_newlevel += 7;
+
+	on_time = (1000000 * tmp_newlevel) / 255;
+	off_time = 1000000 - on_time;
+
+	if (!gpio_data->pin_on) {
+		hrtimer_forward_now(&gpio_data->timer,
+				    ns_to_ktime(on_time));
+		gpiod_set_value(gpio_data->gpiod, 1);
+		gpio_data->pin_on = true;
+	} else {
+		hrtimer_forward_now(&gpio_data->timer,
+				    ns_to_ktime(off_time));
+		gpiod_set_value(gpio_data->gpiod, 0);
+		gpio_data->pin_on = false;
+	}
+
+	return HRTIMER_RESTART;
+}
+
+
 static void gpio_led_set(struct led_classdev *led_cdev,
 	enum led_brightness value)
 {
@@ -53,10 +93,8 @@ static void gpio_led_set(struct led_classdev *led_cdev,
 		container_of(led_cdev, struct gpio_led_data, cdev);
 	int level;
 
-	if (value == LED_OFF)
-		level = 0;
-	else
-		level = 1;
+	level = value;
+	led_dat->new_level = level;
 
 	/* Setting GPIOs with I2C/etc requires a task context, and we don't
 	 * seem to have a reliable way to know if we're already in one; so
@@ -70,8 +108,21 @@ static void gpio_led_set(struct led_classdev *led_cdev,
 			led_dat->platform_gpio_blink_set(led_dat->gpiod, level,
 							 NULL, NULL);
 			led_dat->blinking = 0;
-		} else
-			gpiod_set_value(led_dat->gpiod, level);
+		} else {
+			if((level == 255 || level == 0) && led_dat->timer_start) {
+				hrtimer_cancel(&led_dat->timer);
+				led_dat->timer_start = false;
+			}
+			if(level == 255)
+				gpiod_set_value(led_dat->gpiod, 1);
+			else if(level == 0)
+				gpiod_set_value(led_dat->gpiod, 0);
+			else if(!led_dat->timer_start) {
+				hrtimer_start(&led_dat->timer, ktime_set(0,0),
+					      HRTIMER_MODE_REL);
+				led_dat->timer_start = true;
+			}
+		}
 	}
 }
 
@@ -125,6 +176,7 @@ static int create_gpio_led(const struct gpio_led *template,
 	led_dat->cdev.name = template->name;
 	led_dat->cdev.default_trigger = template->default_trigger;
 	led_dat->can_sleep = gpiod_cansleep(led_dat->gpiod);
+
 	led_dat->blinking = 0;
 	if (blink_set) {
 		led_dat->platform_gpio_blink_set = blink_set;
@@ -138,6 +190,13 @@ static int create_gpio_led(const struct gpio_led *template,
 	led_dat->cdev.brightness = state ? LED_FULL : LED_OFF;
 	if (!template->retain_state_suspended)
 		led_dat->cdev.flags |= LED_CORE_SUSPENDRESUME;
+
+	hrtimer_init(&led_dat->timer,
+		     CLOCK_MONOTONIC,
+		     HRTIMER_MODE_REL
+		     );
+	led_dat->timer.function = timer_callback;
+	led_dat->timer_start = false;
 
 	ret = gpiod_direction_output(led_dat->gpiod, state);
 	if (ret < 0)
@@ -314,7 +373,9 @@ static struct platform_driver gpio_led_driver = {
 
 module_platform_driver(gpio_led_driver);
 
-MODULE_AUTHOR("Raphael Assenat <raph@8d.com>, Trent Piepho <tpiepho@freescale.com>");
+MODULE_AUTHOR("Raphael Assenat <raph@8d.com>,"
+	      "Trent Piepho <tpiepho@freescale.com>,"
+	      "Matteo Fumagalli <m.fumagalli@rushup.tech>");
 MODULE_DESCRIPTION("GPIO LED driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:leds-gpio");
