@@ -62,6 +62,12 @@ static const char * const iio_ev_type_text[] = {
 	[IIO_EV_TYPE_THRESH_ADAPTIVE] = "thresh_adaptive",
 	[IIO_EV_TYPE_MAG_ADAPTIVE] = "mag_adaptive",
 	[IIO_EV_TYPE_CHANGE] = "change",
+	[IIO_EV_TYPE_SINGLE_TAP] = "tap",
+	[IIO_EV_TYPE_DOUBLE_TAP] = "dtap",
+	[IIO_EV_TYPE_PEDOMETER] = "perdometer",
+	[IIO_EV_TYPE_TILT] = "tilt",
+	[IIO_EV_TYPE_MOTION] = "motion",
+	[IIO_EV_TYPE_FREEFALL] = "freefall",
 };
 
 static const char * const iio_ev_dir_text[] = {

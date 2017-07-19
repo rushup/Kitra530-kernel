@@ -98,6 +98,8 @@ struct st_lsm6dsx_sensor {
 
 	s64 delta_ts;
 	s64 ts;
+
+	u32 event_mask;
 };
 
 /**

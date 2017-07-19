@@ -278,9 +278,9 @@
 			lsm303agr_accel@19 {
 				compatible = "st,lsm303agr-accel";
 				reg = <0x19>;
-				st,drdy-int-pin = <1>;
+				st,drdy-int-pin = <2>;
 				interrupt-parent = <&gpio_a>;
-				interrupts = <10 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <13 IRQ_TYPE_EDGE_RISING>;
 			};
 
 			lsm6dsl@6b {
@@ -292,8 +292,8 @@
 			};
 
 			vl53l0@29 {
-			compatible = "st,stmvl53l0";
-			reg = <0x29>;
+				compatible = "st,stmvl53l0";
+				reg = <0x29>;
 			};
 
 

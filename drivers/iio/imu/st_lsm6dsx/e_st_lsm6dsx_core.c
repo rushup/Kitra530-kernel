@@ -40,8 +40,6 @@
 #include <linux/platform_data/st_sensors_pdata.h>
 
 #include "st_lsm6dsx.h"
-#include "lsm6dsl/LSM6DSL_ACC_GYRO_driver.h"
-#include "lsm6dsl/lsm6dsl_events.h"
 
 #define ST_LSM6DSX_REG_ACC_DEC_MASK		GENMASK(2, 0)
 #define ST_LSM6DSX_REG_GYRO_DEC_MASK		GENMASK(5, 3)
@@ -86,13 +84,94 @@
 #define ST_LSM6DSX_GYRO_FS_1000_GAIN		IIO_DEGREE_TO_RAD(35000)
 #define ST_LSM6DSX_GYRO_FS_2000_GAIN		IIO_DEGREE_TO_RAD(70000)
 
+/**/
+
+#define ST_LSM6DSX_REG_CFG1_ADDR			0x58
+#define ST_LSM6DSX_REG_CFG1_MASK			BIT(0)
+
+#define LSM6DSL_ACC_GYRO_MD1_CFG    0X5E
+#define LSM6DSL_ACC_GYRO_MD2_CFG    0X5F
+
+#define LSM6DSL_ACC_GYRO_INT_DUR2   0X5A
+#define LSM6DSL_ACC_GYRO_TAP_CFG1   0X58
+#define LSM6DSL_ACC_GYRO_TAP_THS_6D   0X59
+
+typedef enum
+{
+  LSM6DSL_ACC_GYRO_TAP_Z_EN_DISABLED     = 0x00,
+  LSM6DSL_ACC_GYRO_TAP_Z_EN_ENABLED      = 0x02,
+} LSM6DSL_ACC_GYRO_TAP_Z_EN_t;
+
+#define   LSM6DSL_ACC_GYRO_TAP_Z_EN_MASK    0x02
+
+typedef enum
+{
+  LSM6DSL_ACC_GYRO_TAP_Y_EN_DISABLED     = 0x00,
+  LSM6DSL_ACC_GYRO_TAP_Y_EN_ENABLED      = 0x04,
+} LSM6DSL_ACC_GYRO_TAP_Y_EN_t;
+
+#define   LSM6DSL_ACC_GYRO_TAP_Y_EN_MASK    0x04
+
+typedef enum
+{
+  LSM6DSL_ACC_GYRO_TAP_X_EN_DISABLED     = 0x00,
+  LSM6DSL_ACC_GYRO_TAP_X_EN_ENABLED      = 0x08,
+} LSM6DSL_ACC_GYRO_TAP_X_EN_t;
+
+typedef enum
+{
+  LSM6DSL_ACC_GYRO_BASIC_INT_DISABLED      = 0x00,
+  LSM6DSL_ACC_GYRO_BASIC_INT_ENABLED     = 0x80,
+} LSM6DSL_ACC_GYRO_INT_EN_t;
+
+#define   LSM6DSL_ACC_GYRO_TAP_X_EN_MASK    0x08
+
+typedef enum
+{
+  LSM6DSL_ACC_GYRO_INT2_SINGLE_TAP_DISABLED      = 0x00,
+  LSM6DSL_ACC_GYRO_INT2_SINGLE_TAP_ENABLED     = 0x40,
+} LSM6DSL_ACC_GYRO_INT2_SINGLE_TAP_t;
+
+#define   LSM6DSL_ACC_GYRO_INT2_SINGLE_TAP_MASK   0x40
+
+#define LSM6DSL_TAP_THRESHOLD_LOW       0x01  /**< Lowest  value of wake up threshold */
+#define LSM6DSL_TAP_THRESHOLD_MID_LOW   0x08
+#define LSM6DSL_TAP_THRESHOLD_MID       0x10
+#define LSM6DSL_TAP_THRESHOLD_MID_HIGH  0x18
+#define LSM6DSL_TAP_THRESHOLD_HIGH      0x1F  /**< Highest value of wake up threshold */
+
+#define LSM6DSL_TAP_SHOCK_TIME_LOW       0x00  /**< Lowest  value of wake up threshold */
+#define LSM6DSL_TAP_SHOCK_TIME_MID_LOW   0x01
+#define LSM6DSL_TAP_SHOCK_TIME_MID_HIGH  0x02
+#define LSM6DSL_TAP_SHOCK_TIME_HIGH      0x03  /**< Highest value of wake up threshold */
+
+#define LSM6DSL_TAP_QUIET_TIME_LOW       0x00  /**< Lowest  value of wake up threshold */
+#define LSM6DSL_TAP_QUIET_TIME_MID_LOW   0x01
+#define LSM6DSL_TAP_QUIET_TIME_MID_HIGH  0x02
+#define LSM6DSL_TAP_QUIET_TIME_HIGH      0x03  /**< Highest value of wake up threshold */
+
+#define LSM6DSL_ACC_GYRO_TAP_SRC    0X1C
+
+#define   LSM6DSL_ACC_GYRO_TAP_THS_MASK   0x1F
+#define   LSM6DSL_ACC_GYRO_TAP_THS_POSITION   0
+
+#define   LSM6DSL_ACC_GYRO_SHOCK_MASK   0x03
+#define   LSM6DSL_ACC_GYRO_SHOCK_POSITION   0
+
+#define   LSM6DSL_ACC_GYRO_QUIET_MASK   0x0C
+#define   LSM6DSL_ACC_GYRO_QUIET_POSITION   2
+
+#define   LSM6DSL_ACC_GYRO_DUR_MASK   0xF0
+#define   LSM6DSL_ACC_GYRO_DUR_POSITION   4
+
+#define   LSM6DSL_ACC_GYRO_INT_EN_MASK    0x80
 
 struct st_lsm6dsx_odr {
 	u16 hz;
 	u8 val;
 };
 
-#define ST_LSM6DSX_ODR_LIST_SIZE	7
+#define ST_LSM6DSX_ODR_LIST_SIZE	6
 struct st_lsm6dsx_odr_table_entry {
 	struct st_lsm6dsx_reg reg;
 	struct st_lsm6dsx_odr odr_avl[ST_LSM6DSX_ODR_LIST_SIZE];
@@ -104,26 +183,24 @@ static const struct st_lsm6dsx_odr_table_entry st_lsm6dsx_odr_table[] = {
 			.addr = ST_LSM6DSX_REG_ACC_ODR_ADDR,
 			.mask = ST_LSM6DSX_REG_ACC_ODR_MASK,
 		},
-		.odr_avl[0] = {   0, 0x00},
-		.odr_avl[1] = {  13, 0x01 },
-		.odr_avl[2] = {  26, 0x02 },
-		.odr_avl[3] = {  52, 0x03 },
-		.odr_avl[4] = { 104, 0x04 },
-		.odr_avl[5] = { 208, 0x05 },
-		.odr_avl[6] = { 416, 0x06 },
+		.odr_avl[0] = {  13, 0x01 },
+		.odr_avl[1] = {  26, 0x02 },
+		.odr_avl[2] = {  52, 0x03 },
+		.odr_avl[3] = { 104, 0x04 },
+		.odr_avl[4] = { 208, 0x05 },
+		.odr_avl[5] = { 416, 0x06 },
 	},
 	[ST_LSM6DSX_ID_GYRO] = {
 		.reg = {
 			.addr = ST_LSM6DSX_REG_GYRO_ODR_ADDR,
 			.mask = ST_LSM6DSX_REG_GYRO_ODR_MASK,
 		},
-		.odr_avl[0] = {   0,  0x00},
-		.odr_avl[1] = {  13, 0x01 },
-		.odr_avl[2] = {  26, 0x02 },
-		.odr_avl[3] = {  52, 0x03 },
-		.odr_avl[4] = { 104, 0x04 },
-		.odr_avl[5] = { 208, 0x05 },
-		.odr_avl[6] = { 416, 0x06 },
+		.odr_avl[0] = {  13, 0x01 },
+		.odr_avl[1] = {  26, 0x02 },
+		.odr_avl[2] = {  52, 0x03 },
+		.odr_avl[3] = { 104, 0x04 },
+		.odr_avl[4] = { 208, 0x05 },
+		.odr_avl[5] = { 416, 0x06 },
 	}
 };
 
@@ -204,57 +281,6 @@ static const struct st_lsm6dsx_settings st_lsm6dsx_sensor_settings[] = {
 	},								\
 }
 
-#define ST_LSM6DSX_CHANNEL_EVENT(chan_type, scan_idx)		\
-{									\
-	.type = chan_type,						\
-	.event_spec = st_lsm6dsx_events,				\
-	.num_event_specs = ARRAY_SIZE(st_lsm6dsx_events),		\
-	.scan_index = scan_idx,						\
-	.scan_type = {							\
-		.sign = 's',						\
-		.realbits = 16,						\
-		.storagebits = 16,					\
-		.endianness = IIO_LE,					\
-	},								\
-}
-
-static const struct iio_event_spec st_lsm6dsx_events[] = {
-	{
-		.type = IIO_EV_TYPE_SINGLE_TAP,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate =  BIT(IIO_EV_INFO_VALUE) |
-			BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_DOUBLE_TAP,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_PEDOMETER,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_TILT,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_MOTION,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_FREEFALL,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-};
-
-
-
-
 static const struct iio_chan_spec st_lsm6dsx_acc_channels[] = {
 	ST_LSM6DSX_CHANNEL(IIO_ACCEL, ST_LSM6DSX_REG_ACC_OUT_X_L_ADDR,
 			   IIO_MOD_X, 0),
@@ -263,7 +289,6 @@ static const struct iio_chan_spec st_lsm6dsx_acc_channels[] = {
 	ST_LSM6DSX_CHANNEL(IIO_ACCEL, ST_LSM6DSX_REG_ACC_OUT_Z_L_ADDR,
 			   IIO_MOD_Z, 2),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
-	//ST_LSM6DSX_CHANNEL_EVENT(IIO_ACCEL, 4),
 };
 
 static const struct iio_chan_spec st_lsm6dsx_gyro_channels[] = {
@@ -273,8 +298,34 @@ static const struct iio_chan_spec st_lsm6dsx_gyro_channels[] = {
 			   IIO_MOD_Y, 1),
 	ST_LSM6DSX_CHANNEL(IIO_ANGL_VEL, ST_LSM6DSX_REG_GYRO_OUT_Z_L_ADDR,
 			   IIO_MOD_Z, 2),
-	IIO_CHAN_SOFT_TIMESTAMP(3)
+	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
+
+int st_lsm6dsx_write_with_mask(struct st_lsm6dsx_hw *hw, u8 addr, u8 mask,
+			       u8 val)
+{
+	u8 data;
+	int err;
+
+	mutex_lock(&hw->lock);
+
+	err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
+	if (err < 0) {
+		dev_err(hw->dev, "failed to read %02x register\n", addr);
+		goto out;
+	}
+
+	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
+
+	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
+	if (err < 0)
+		dev_err(hw->dev, "failed to write %02x register\n", addr);
+
+out:
+	mutex_unlock(&hw->lock);
+
+	return err;
+}
 
 int st_lsm6dsx_write_with_mask_no_shift(struct st_lsm6dsx_hw *hw, u8 addr, u8 mask,
 			       u8 val)
@@ -292,134 +343,6 @@ int st_lsm6dsx_write_with_mask_no_shift(struct st_lsm6dsx_hw *hw, u8 addr, u8 ma
 
 	data &= ~mask;
 	data |= val;
-
-	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
-	if (err < 0)
-		dev_err(hw->dev, "failed to write %02x register\n", addr);
-
-out:
-	mutex_unlock(&hw->lock);
-
-	return err;
-}
-
-
-static int st_lsm6dsx_write_event_value(struct iio_dev *indio_dev,
-				 const struct iio_chan_spec *chan,
-				 enum iio_event_type type,
-				 enum iio_event_direction dir,
-				 enum iio_event_info info, int val, int val2)
-{
-	//printk("POPPO WRITE VALUE ch: %d %d %d %d \r\n",chan->channel,info, val, val2);
-	return 0;
-}
-
-static int st_lsm6dsx_read_event_value(struct iio_dev *indio_dev,
-				const struct iio_chan_spec *chan,
-				enum iio_event_type type,
-				enum iio_event_direction dir,
-				enum iio_event_info info, int *val, int *val2)
-{
-	struct st_lsm6dsx_sensor *sensor = iio_priv(indio_dev);
-	int err;
-	u8 data;
-
-	err = sensor->hw->tf->read(sensor->hw->dev, LSM6DSL_ACC_GYRO_TAP_SRC,
-				   sizeof(u8),
-				   &data);
-	*val = data;
-	printk("POPPO READ VALUE type: %d \r\n",type);
-	return 1;
-}
-
-static int st_lsm6dsx_read_event_config(struct iio_dev *indio_dev,
-				    const struct iio_chan_spec *chan,
-				    enum iio_event_type type,
-				    enum iio_event_direction dir)
-{
-	struct st_lsm6dsx_sensor *sensor = iio_priv(indio_dev);
-	printk("POPPO READ EVENT CONFIG type: %d \r\n", type);
-	return (sensor->event_mask & (1 << type)) >> type;
-}
-
-static int st_lsm6dsx_write_event_config(struct iio_dev *indio_dev,
-				     const struct iio_chan_spec *chan,
-				     enum iio_event_type type,
-				     enum iio_event_direction dir,
-				     int state)
-{
-	struct st_lsm6dsx_sensor *sensor = iio_priv(indio_dev);
-	int err = 0;
-
-	printk("POPPO WRITE EVENT CONFIG type: %d state: %d \r\n", type, state);
-
-	if( (sensor->hw->enable_mask & BIT(sensor->id)) == 0 )
-		return -EPERM;
-
-
-	if(state >= 1)
-		sensor->event_mask |= (1 << type);
-	else
-		sensor->event_mask &= ~(1 << type);
-
-	/* Let's disable everything before */
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_SINGLE_TAP)) )
-		err |= lsm6dsl_disable_tap(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_DOUBLE_TAP)) )
-		err |= lsm6dsl_disable_dtap(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_PEDOMETER)) )
-		err |= lsm6dsl_disable_pedometer(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_MOTION)) )
-		err |= lsm6dsl_disable_motion(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_TILT)) )
-		err |= lsm6dsl_disable_tilt(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_FREEFALL)) )
-		err |= lsm6dsl_disable_freefall(sensor);
-
-	/* Enable */
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_FREEFALL)) )
-		err |= lsm6dsl_enable_freefall(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_SINGLE_TAP)) )
-		err |= lsm6dsl_enable_tap(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_DOUBLE_TAP)) )
-		err |= lsm6dsl_enable_dtap(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_MOTION)) )
-		err |= lsm6dsl_enable_motion(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_TILT)) )
-		err |= lsm6dsl_enable_tilt(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_PEDOMETER)) )
-		err |= lsm6dsl_enable_pedometer(sensor,1);
-
-	return err;
-}
-
-int st_lsm6dsx_write_with_mask(struct st_lsm6dsx_hw *hw, u8 addr, u8 mask,
-			       u8 val)
-{
-	u8 data;
-	int err;
-
-	mutex_lock(&hw->lock);
-
-	err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-		goto out;
-	}
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
 
 	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
 	if (err < 0)
@@ -518,58 +441,20 @@ static int st_lsm6dsx_set_odr(struct st_lsm6dsx_sensor *sensor, u16 odr)
 	int err;
 	u8 val;
 
-	printk("POPPO SET ODR %d \r\n",odr);
-
 	err = st_lsm6dsx_check_odr(sensor, odr, &val);
 	if (err < 0)
 		return err;
 
-	err = st_lsm6dsx_write_with_mask(sensor->hw,
+	return st_lsm6dsx_write_with_mask(sensor->hw,
 					  st_lsm6dsx_odr_table[id].reg.addr,
 					  st_lsm6dsx_odr_table[id].reg.mask,
 					  val);
-
-	if( err < 0)
-		return err;
-
-	if(odr == 0)
-		sensor->hw->enable_mask &= ~BIT(id);
-	else
-		sensor->hw->enable_mask |= BIT(id);
-
-	return err;
 }
-
-
-static int st_lsm6dsx_get_odr(struct st_lsm6dsx_sensor *sensor)
-{
-	enum st_lsm6dsx_sensor_id id = sensor->id;
-	int err;
-	int i;
-	u8 val;
-
-	err = sensor->hw->tf->read(sensor->hw->dev,
-				   st_lsm6dsx_odr_table[id].reg.addr,
-				   sizeof(val), &val);
-
-	printk("POPPO GET ODR %d \r\n",val);
-
-	for (i = 0; i < ST_LSM6DSX_ODR_LIST_SIZE; i++)
-		if (st_lsm6dsx_odr_table[sensor->id].odr_avl[i].val == (val >> 4)) {
-			return st_lsm6dsx_odr_table[sensor->id].odr_avl[i].hz;
-		}
-
-	return -EINVAL;
-}
-
 
 int st_lsm6dsx_sensor_enable(struct st_lsm6dsx_sensor *sensor)
 {
-	int err;
+	//int err;
 
-	err = st_lsm6dsx_set_odr(sensor, sensor->odr);
-	if (err < 0)
-		return err;
 
 	sensor->hw->enable_mask |= BIT(sensor->id);
 
@@ -592,14 +477,40 @@ int st_lsm6dsx_sensor_disable(struct st_lsm6dsx_sensor *sensor)
 	return 0;
 }
 
+
+static void check_reg(struct st_lsm6dsx_hw *hw)
+{
+	u8 i;
+	u8 data;
+	u8 regs[] = {LSM6DSL_ACC_GYRO_TAP_CFG1, LSM6DSL_ACC_GYRO_TAP_THS_6D, LSM6DSL_ACC_GYRO_INT_DUR2, LSM6DSL_ACC_GYRO_MD2_CFG};
+
+	for( i=0; i < 4; i++)
+	{
+		hw->tf->read(hw->dev, regs[i], sizeof(data), (u8 *)&data);
+		printk("POPPO REG %d VALUE %d", regs[i], data);
+	}
+
+}
+
+
 static int st_lsm6dsx_read_oneshot(struct st_lsm6dsx_sensor *sensor,
 				   u8 addr, int *val)
 {
 	int err, delay;
 	__le16 data;
+	u8 data2;
 
-	if(!(sensor->hw->enable_mask & BIT(sensor->id)))
-		return -EPERM;
+	//err = st_lsm6dsx_sensor_enable(sensor);
+	//if (err < 0)
+	//	return err;
+
+	check_reg(sensor->hw);
+
+	data2 = 0;
+	err = sensor->hw->tf->read(sensor->hw->dev, LSM6DSL_ACC_GYRO_TAP_SRC, sizeof(u8),
+				   &data2);
+
+	printk("POPPO STATUS %d \r\n", (data2));
 
 	delay = 1000000 / sensor->odr;
 	usleep_range(delay, 2 * delay);
@@ -609,7 +520,9 @@ static int st_lsm6dsx_read_oneshot(struct st_lsm6dsx_sensor *sensor,
 	if (err < 0)
 		return err;
 
-	*val = (s16)data;
+	//st_lsm6dsx_sensor_disable(sensor);
+
+	*val = data2;//(s16)data;
 
 	return IIO_VAL_INT;
 }
@@ -620,7 +533,6 @@ static int st_lsm6dsx_read_raw(struct iio_dev *iio_dev,
 {
 	struct st_lsm6dsx_sensor *sensor = iio_priv(iio_dev);
 	int ret = 0;
-	u8 data;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
@@ -634,14 +546,8 @@ static int st_lsm6dsx_read_raw(struct iio_dev *iio_dev,
 		//iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
-
-		*val = st_lsm6dsx_get_odr(sensor);
-		if(*val == -EINVAL)
-			ret = -EINVAL;
-		else {
-			ret = IIO_VAL_INT;
-			sensor->odr = *val;
-		}
+		*val = sensor->odr;
+		ret = IIO_VAL_INT;
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		*val = 0;
@@ -673,9 +579,9 @@ static int st_lsm6dsx_write_raw(struct iio_dev *iio_dev,
 		err = st_lsm6dsx_set_full_scale(sensor, val2);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
-		err = st_lsm6dsx_set_odr(sensor, val);
-		if(err >= 0)
-			err = 0;
+		u8 data;
+
+		err = st_lsm6dsx_check_odr(sensor, val, &data);
 		break;
 	}
 	default:
@@ -741,45 +647,15 @@ static ssize_t st_lsm6dsx_sysfs_scale_avail(struct device *dev,
 	return len;
 }
 
-static ssize_t st_lsm6dsx_events_set(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t len)
-{
-	
-	printk("POPPO EVT %s \r\n", buf);
-
-	return 0;
-}
-
-static ssize_t st_lsm6dsx_events_avail(struct device *dev,
-					    struct device_attribute *attr,
-					    char *buf)
-{
-	
-	int i, len = 0;
-
-	len += scnprintf(buf + len,5, "tap ");
-	buf[len - 1] = '\n';
-
-	return len;
-}
-
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_lsm6dsx_sysfs_sampling_frequency_avail);
 static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
 static IIO_DEVICE_ATTR(in_anglvel_scale_available, 0444,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
-static IIO_DEVICE_ATTR(in_accel_event_set, S_IWUSR,
-		       st_lsm6dsx_events_set, NULL, 0);
-static IIO_DEVICE_ATTR(in_accel_events_available, S_IRUGO,
-		       st_lsm6dsx_events_avail, NULL, 0);
-
 
 static struct attribute *st_lsm6dsx_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
 	&iio_dev_attr_in_accel_scale_available.dev_attr.attr,
-	&iio_dev_attr_in_accel_event_set.dev_attr.attr,
-	&iio_dev_attr_in_accel_events_available.dev_attr.attr,
 	NULL,
 };
 
@@ -793,10 +669,6 @@ static const struct iio_info st_lsm6dsx_acc_info = {
 	.read_raw = st_lsm6dsx_read_raw,
 	.write_raw = st_lsm6dsx_write_raw,
 	.hwfifo_set_watermark = st_lsm6dsx_set_watermark,
-	.read_event_config = st_lsm6dsx_read_event_config,
-	.write_event_config = st_lsm6dsx_write_event_config,
-	.read_event_value = st_lsm6dsx_read_event_value,
-	.write_event_value = st_lsm6dsx_write_event_value,
 };
 
 static struct attribute *st_lsm6dsx_gyro_attributes[] = {
@@ -870,12 +742,21 @@ static int st_lsm6dsx_init_device(struct st_lsm6dsx_hw *hw)
 
 	msleep(200);
 
+	st_lsm6dsx_write_with_mask(hw, 
+		st_lsm6dsx_odr_table[ST_LSM6DSX_ID_ACC].reg.addr,
+		st_lsm6dsx_odr_table[ST_LSM6DSX_ID_ACC].reg.mask,
+		0x06);
+
+	if (err < 0)
+		return err;
+
+
 	/* latch interrupts */
 	err = st_lsm6dsx_write_with_mask(hw, ST_LSM6DSX_REG_LIR_ADDR,
 					 ST_LSM6DSX_REG_LIR_MASK, 1);
 	if (err < 0)
 		return err;
-
+ 
 	/* enable Block Data Update */
 	err = st_lsm6dsx_write_with_mask(hw, ST_LSM6DSX_REG_BDU_ADDR,
 					 ST_LSM6DSX_REG_BDU_MASK, 1);
@@ -892,9 +773,53 @@ static int st_lsm6dsx_init_device(struct st_lsm6dsx_hw *hw)
 	if (err < 0)
 		return err;
 
-	return st_lsm6dsx_write_with_mask(hw, drdy_int_reg,
+	err = st_lsm6dsx_write_with_mask(hw, drdy_int_reg,
 					  ST_LSM6DSX_REG_FIFO_FTH_IRQ_MASK, 1);
+	if (err < 0)
+		return err;
+
+	printk("POPPO CONFIG1 %d \r\n", err);
+
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_TAP_CFG1,
+					 LSM6DSL_ACC_GYRO_TAP_X_EN_MASK, LSM6DSL_ACC_GYRO_TAP_X_EN_ENABLED);
+
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_TAP_CFG1,
+					 LSM6DSL_ACC_GYRO_TAP_Y_EN_MASK, LSM6DSL_ACC_GYRO_TAP_Y_EN_ENABLED);
+
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_TAP_CFG1,
+					 LSM6DSL_ACC_GYRO_TAP_Z_EN_MASK, LSM6DSL_ACC_GYRO_TAP_Z_EN_ENABLED);
+
+
+	data = LSM6DSL_TAP_THRESHOLD_MID_LOW << LSM6DSL_ACC_GYRO_TAP_THS_POSITION; //mask
+	data &= LSM6DSL_ACC_GYRO_TAP_THS_MASK; //coerce
+
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_TAP_THS_6D,
+					 LSM6DSL_ACC_GYRO_TAP_THS_MASK, data);
+	
+	data = LSM6DSL_TAP_SHOCK_TIME_MID_HIGH << LSM6DSL_ACC_GYRO_SHOCK_POSITION; //mask
+	data &= LSM6DSL_ACC_GYRO_SHOCK_MASK; //coerce
+
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_INT_DUR2,
+					 LSM6DSL_ACC_GYRO_SHOCK_MASK, data);
+
+	data = LSM6DSL_TAP_QUIET_TIME_MID_LOW << LSM6DSL_ACC_GYRO_QUIET_POSITION; //mask
+	data &= LSM6DSL_ACC_GYRO_QUIET_MASK; //coerce
+
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_INT_DUR2,
+					 LSM6DSL_ACC_GYRO_QUIET_MASK, data);
+
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_TAP_CFG1,
+					 LSM6DSL_ACC_GYRO_INT_EN_MASK, LSM6DSL_ACC_GYRO_BASIC_INT_ENABLED);
+
+	//int2
+	err = st_lsm6dsx_write_with_mask_no_shift(hw, LSM6DSL_ACC_GYRO_MD2_CFG,
+					 LSM6DSL_ACC_GYRO_INT2_SINGLE_TAP_MASK, LSM6DSL_ACC_GYRO_INT2_SINGLE_TAP_ENABLED);
+
+	printk("POPPO CONFIG2 %d \r\n", err);
+
+	return 1;
 }
+
 
 static struct iio_dev *st_lsm6dsx_alloc_iiodev(struct st_lsm6dsx_hw *hw,
 					       enum st_lsm6dsx_sensor_id id,
@@ -914,10 +839,9 @@ static struct iio_dev *st_lsm6dsx_alloc_iiodev(struct st_lsm6dsx_hw *hw,
 	sensor = iio_priv(iio_dev);
 	sensor->id = id;
 	sensor->hw = hw;
-	sensor->odr = st_lsm6dsx_odr_table[id].odr_avl[0].hz;
+	sensor->odr = 416;//st_lsm6dsx_odr_table[id].odr_avl[0].hz;
 	sensor->gain = st_lsm6dsx_fs_table[id].fs_avl[0].gain;
 	sensor->watermark = 1;
-	sensor->event_mask = 0;
 
 	switch (id) {
 	case ST_LSM6DSX_ID_ACC:

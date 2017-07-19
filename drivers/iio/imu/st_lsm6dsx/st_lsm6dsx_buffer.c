@@ -108,6 +108,8 @@ static int st_lsm6dsx_update_decimators(struct st_lsm6dsx_hw *hw)
 
 		/* update fifo decimators and sample in pattern */
 		if (hw->enable_mask & BIT(sensor->id)) {
+			if(min_odr == 0 || sensor->odr == 0)
+				return -EINVAL; //if odr not set for both, don't allow
 			sensor->sip = sensor->odr / min_odr;
 			sensor->decimator = max_odr / sensor->odr;
 			data = st_lsm6dsx_get_decimator_val(sensor->decimator);
@@ -329,6 +331,7 @@ static int st_lsm6dsx_update_fifo(struct iio_dev *iio_dev, bool enable)
 			return err;
 	}
 
+/* Currently it is enable if odr > 0
 	if (enable) {
 		err = st_lsm6dsx_sensor_enable(sensor);
 		if (err < 0)
@@ -338,6 +341,7 @@ static int st_lsm6dsx_update_fifo(struct iio_dev *iio_dev, bool enable)
 		if (err < 0)
 			return err;
 	}
+*/
 
 	err = st_lsm6dsx_update_decimators(hw);
 	if (err < 0)
