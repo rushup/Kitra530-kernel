@@ -86,6 +86,15 @@
 #define ST_LSM6DSX_GYRO_FS_1000_GAIN		IIO_DEGREE_TO_RAD(35000)
 #define ST_LSM6DSX_GYRO_FS_2000_GAIN		IIO_DEGREE_TO_RAD(70000)
 
+enum st_lsm6dsx_event_type {
+	ST_LSM6DSX_TAP,
+	ST_LSM6DSX_DTAP,
+	ST_LSM6DSX_TILT,
+	ST_LSM6DSX_FREEFALL,
+	ST_LSM6DSX_PEDOMETER,
+	ST_LSM6DSX_WAKEUP,
+};
+
 
 struct st_lsm6dsx_odr {
 	u16 hz;
@@ -353,54 +362,6 @@ static int st_lsm6dsx_write_event_config(struct iio_dev *indio_dev,
 
 	printk("POPPO WRITE EVENT CONFIG type: %d state: %d \r\n", type, state);
 
-	if( (sensor->hw->enable_mask & BIT(sensor->id)) == 0 )
-		return -EPERM;
-
-
-	if(state >= 1)
-		sensor->event_mask |= (1 << type);
-	else
-		sensor->event_mask &= ~(1 << type);
-
-	/* Let's disable everything before */
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_SINGLE_TAP)) )
-		err |= lsm6dsl_disable_tap(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_DOUBLE_TAP)) )
-		err |= lsm6dsl_disable_dtap(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_PEDOMETER)) )
-		err |= lsm6dsl_disable_pedometer(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_MOTION)) )
-		err |= lsm6dsl_disable_motion(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_TILT)) )
-		err |= lsm6dsl_disable_tilt(sensor);
-
-	if( !(sensor->event_mask & (1 << IIO_EV_TYPE_FREEFALL)) )
-		err |= lsm6dsl_disable_freefall(sensor);
-
-	/* Enable */
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_FREEFALL)) )
-		err |= lsm6dsl_enable_freefall(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_SINGLE_TAP)) )
-		err |= lsm6dsl_enable_tap(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_DOUBLE_TAP)) )
-		err |= lsm6dsl_enable_dtap(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_MOTION)) )
-		err |= lsm6dsl_enable_motion(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_TILT)) )
-		err |= lsm6dsl_enable_tilt(sensor,1);
-
-	if( (sensor->event_mask & (1 << IIO_EV_TYPE_PEDOMETER)) )
-		err |= lsm6dsl_enable_pedometer(sensor,1);
 
 	return err;
 }
@@ -741,45 +702,128 @@ static ssize_t st_lsm6dsx_sysfs_scale_avail(struct device *dev,
 	return len;
 }
 
-static ssize_t st_lsm6dsx_events_set(struct device *dev,
+static ssize_t st_lsm6dsx_event_en_set(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t len)
 {
-	
-	printk("POPPO EVT %s \r\n", buf);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	enum st_lsm6dsx_event_type type = (u32)this_attr->address;
+	bool state;
+	int err;
 
-	return 0;
+	err = strtobool(buf, &state);
+	if (err < 0)
+		return err;
+
+	if( (sensor->hw->enable_mask & BIT(sensor->id)) == 0 )
+		return -EPERM;
+
+
+	if(state >= 1)
+		sensor->event_mask |= (1 << type);
+	else
+		sensor->event_mask &= ~(1 << type);
+
+	mutex_lock(&indio_dev->mlock);
+
+	/* Let's disable everything before */
+
+	if( !(sensor->event_mask & (1 << ST_LSM6DSX_TAP)) )
+		err |= lsm6dsl_disable_tap(sensor);
+
+	if( !(sensor->event_mask & (1 << ST_LSM6DSX_DTAP)) )
+		err |= lsm6dsl_disable_dtap(sensor);
+
+	if( !(sensor->event_mask & (1 << ST_LSM6DSX_PEDOMETER)) )
+		err |= lsm6dsl_disable_pedometer(sensor);
+
+	if( !(sensor->event_mask & (1 << ST_LSM6DSX_WAKEUP)) )
+		err |= lsm6dsl_disable_motion(sensor);
+
+	if( !(sensor->event_mask & (1 << ST_LSM6DSX_TILT)) )
+		err |= lsm6dsl_disable_tilt(sensor);
+
+	if( !(sensor->event_mask & (1 << ST_LSM6DSX_FREEFALL)) )
+		err |= lsm6dsl_disable_freefall(sensor);
+
+	/* Enable */
+
+	if( (sensor->event_mask & (1 << ST_LSM6DSX_FREEFALL)) )
+		err |= lsm6dsl_enable_freefall(sensor,1);
+
+	if( (sensor->event_mask & (1 << ST_LSM6DSX_TAP)) )
+		err |= lsm6dsl_enable_tap(sensor,1);
+
+	if( (sensor->event_mask & (1 << ST_LSM6DSX_DTAP)) )
+		err |= lsm6dsl_enable_dtap(sensor,1);
+
+	if( (sensor->event_mask & (1 << ST_LSM6DSX_WAKEUP)) )
+		err |= lsm6dsl_enable_motion(sensor,1);
+
+	if( (sensor->event_mask & (1 << ST_LSM6DSX_TILT)) )
+		err |= lsm6dsl_enable_tilt(sensor,1);
+
+	if( (sensor->event_mask & (1 << ST_LSM6DSX_PEDOMETER)) )
+		err |= lsm6dsl_enable_pedometer(sensor,1);
+
+	mutex_unlock(&indio_dev->mlock);
+
+	return err ? err : len;
 }
 
-static ssize_t st_lsm6dsx_events_avail(struct device *dev,
+
+static ssize_t st_lsm6dsx_event_en_get(struct device *dev,
 					    struct device_attribute *attr,
 					    char *buf)
 {
-	
-	int i, len = 0;
+	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	enum st_lsm6dsx_event_type type = (u32)this_attr->address;
+	int len = 0;
 
-	len += scnprintf(buf + len,5, "tap ");
-	buf[len - 1] = '\n';
+	len += scnprintf(buf,3, "%d\n",(sensor->event_mask & (1 << type)) >> type);
 
 	return len;
 }
 
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_lsm6dsx_sysfs_sampling_frequency_avail);
+
 static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
+
 static IIO_DEVICE_ATTR(in_anglvel_scale_available, 0444,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
-static IIO_DEVICE_ATTR(in_accel_event_set, S_IWUSR,
-		       st_lsm6dsx_events_set, NULL, 0);
-static IIO_DEVICE_ATTR(in_accel_events_available, S_IRUGO,
-		       st_lsm6dsx_events_avail, NULL, 0);
+
+static IIO_DEVICE_ATTR(event_tap_en, 0664,
+		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_TAP);
+
+static IIO_DEVICE_ATTR(event_dtap_en, 0664,
+		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_DTAP);
+
+static IIO_DEVICE_ATTR(event_tilt_en, 0664,
+		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_TILT);
+
+static IIO_DEVICE_ATTR(event_pedometer_en, 0664,
+		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_PEDOMETER);
+
+static IIO_DEVICE_ATTR(event_freefall_en, 0664,
+		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_FREEFALL);
+
+static IIO_DEVICE_ATTR(event_wakeup_en, 0664,
+		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_WAKEUP);
 
 
 static struct attribute *st_lsm6dsx_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
 	&iio_dev_attr_in_accel_scale_available.dev_attr.attr,
-	&iio_dev_attr_in_accel_event_set.dev_attr.attr,
-	&iio_dev_attr_in_accel_events_available.dev_attr.attr,
+	&iio_dev_attr_event_tap_en.dev_attr.attr,
+	&iio_dev_attr_event_dtap_en.dev_attr.attr,
+	&iio_dev_attr_event_tilt_en.dev_attr.attr,
+	&iio_dev_attr_event_pedometer_en.dev_attr.attr,
+	&iio_dev_attr_event_freefall_en.dev_attr.attr,
+	&iio_dev_attr_event_wakeup_en.dev_attr.attr,
 	NULL,
 };
 

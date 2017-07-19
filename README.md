@@ -63,3 +63,9 @@ sync
 reboot
 ```
 
+
+### Credits
+
+Driver developed by RushUp and Kalpa srl
+
+
