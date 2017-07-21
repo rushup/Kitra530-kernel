@@ -36,6 +36,11 @@
 #include <linux/delay.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
+#include <linux/of_irq.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
+#include <linux/iio/events.h>
+#include <linux/kfifo.h>
 
 #include <linux/platform_data/st_sensors_pdata.h>
 
@@ -93,6 +98,15 @@ enum st_lsm6dsx_event_type {
 	ST_LSM6DSX_FREEFALL,
 	ST_LSM6DSX_PEDOMETER,
 	ST_LSM6DSX_WAKEUP,
+};
+
+char* st_lsm6dsx_event_names[] = {
+	[ST_LSM6DSX_TAP] = "tap",
+	[ST_LSM6DSX_DTAP] = "dtap",
+	[ST_LSM6DSX_TILT] = "tilt",
+	[ST_LSM6DSX_FREEFALL] = "freefall",
+	[ST_LSM6DSX_PEDOMETER] = "step",
+	[ST_LSM6DSX_WAKEUP] = "wakeup",
 };
 
 
@@ -271,8 +285,7 @@ static const struct iio_chan_spec st_lsm6dsx_acc_channels[] = {
 			   IIO_MOD_Y, 1),
 	ST_LSM6DSX_CHANNEL(IIO_ACCEL, ST_LSM6DSX_REG_ACC_OUT_Z_L_ADDR,
 			   IIO_MOD_Z, 2),
-	IIO_CHAN_SOFT_TIMESTAMP(3),
-	//ST_LSM6DSX_CHANNEL_EVENT(IIO_ACCEL, 4),
+	IIO_CHAN_SOFT_TIMESTAMP(3)
 };
 
 static const struct iio_chan_spec st_lsm6dsx_gyro_channels[] = {
@@ -313,58 +326,6 @@ out:
 }
 
 
-static int st_lsm6dsx_write_event_value(struct iio_dev *indio_dev,
-				 const struct iio_chan_spec *chan,
-				 enum iio_event_type type,
-				 enum iio_event_direction dir,
-				 enum iio_event_info info, int val, int val2)
-{
-	//printk("POPPO WRITE VALUE ch: %d %d %d %d \r\n",chan->channel,info, val, val2);
-	return 0;
-}
-
-static int st_lsm6dsx_read_event_value(struct iio_dev *indio_dev,
-				const struct iio_chan_spec *chan,
-				enum iio_event_type type,
-				enum iio_event_direction dir,
-				enum iio_event_info info, int *val, int *val2)
-{
-	struct st_lsm6dsx_sensor *sensor = iio_priv(indio_dev);
-	int err;
-	u8 data;
-
-	err = sensor->hw->tf->read(sensor->hw->dev, LSM6DSL_ACC_GYRO_TAP_SRC,
-				   sizeof(u8),
-				   &data);
-	*val = data;
-	printk("POPPO READ VALUE type: %d \r\n",type);
-	return 1;
-}
-
-static int st_lsm6dsx_read_event_config(struct iio_dev *indio_dev,
-				    const struct iio_chan_spec *chan,
-				    enum iio_event_type type,
-				    enum iio_event_direction dir)
-{
-	struct st_lsm6dsx_sensor *sensor = iio_priv(indio_dev);
-	printk("POPPO READ EVENT CONFIG type: %d \r\n", type);
-	return (sensor->event_mask & (1 << type)) >> type;
-}
-
-static int st_lsm6dsx_write_event_config(struct iio_dev *indio_dev,
-				     const struct iio_chan_spec *chan,
-				     enum iio_event_type type,
-				     enum iio_event_direction dir,
-				     int state)
-{
-	struct st_lsm6dsx_sensor *sensor = iio_priv(indio_dev);
-	int err = 0;
-
-	printk("POPPO WRITE EVENT CONFIG type: %d state: %d \r\n", type, state);
-
-
-	return err;
-}
 
 int st_lsm6dsx_write_with_mask(struct st_lsm6dsx_hw *hw, u8 addr, u8 mask,
 			       u8 val)
@@ -479,8 +440,6 @@ static int st_lsm6dsx_set_odr(struct st_lsm6dsx_sensor *sensor, u16 odr)
 	int err;
 	u8 val;
 
-	printk("POPPO SET ODR %d \r\n",odr);
-
 	err = st_lsm6dsx_check_odr(sensor, odr, &val);
 	if (err < 0)
 		return err;
@@ -512,8 +471,6 @@ static int st_lsm6dsx_get_odr(struct st_lsm6dsx_sensor *sensor)
 	err = sensor->hw->tf->read(sensor->hw->dev,
 				   st_lsm6dsx_odr_table[id].reg.addr,
 				   sizeof(val), &val);
-
-	printk("POPPO GET ODR %d \r\n",val);
 
 	for (i = 0; i < ST_LSM6DSX_ODR_LIST_SIZE; i++)
 		if (st_lsm6dsx_odr_table[sensor->id].odr_avl[i].val == (val >> 4)) {
@@ -581,7 +538,6 @@ static int st_lsm6dsx_read_raw(struct iio_dev *iio_dev,
 {
 	struct st_lsm6dsx_sensor *sensor = iio_priv(iio_dev);
 	int ret = 0;
-	u8 data;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
@@ -702,11 +658,27 @@ static ssize_t st_lsm6dsx_sysfs_scale_avail(struct device *dev,
 	return len;
 }
 
+static ssize_t st_lsm6dsx_event_reset_steps(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t len)
+{
+	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
+	int err;
+
+	err = lsm6dsl_pedometer_enable_step_reset(sensor);
+	msleep(10);
+	err = lsm6dsl_pedometer_disable_step_reset(sensor);
+	
+	if(err < 0)
+		return err;
+
+	return len;
+}
+
 static ssize_t st_lsm6dsx_event_en_set(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t len)
 {
-	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	enum st_lsm6dsx_event_type type = (u32)this_attr->address;
@@ -726,7 +698,7 @@ static ssize_t st_lsm6dsx_event_en_set(struct device *dev,
 	else
 		sensor->event_mask &= ~(1 << type);
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&sensor->hw->lock);
 
 	/* Let's disable everything before */
 
@@ -768,7 +740,7 @@ static ssize_t st_lsm6dsx_event_en_set(struct device *dev,
 	if( (sensor->event_mask & (1 << ST_LSM6DSX_PEDOMETER)) )
 		err |= lsm6dsl_enable_pedometer(sensor,1);
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&sensor->hw->lock);
 
 	return err ? err : len;
 }
@@ -788,6 +760,28 @@ static ssize_t st_lsm6dsx_event_en_get(struct device *dev,
 	return len;
 }
 
+static ssize_t st_lsm6dsx_event_pop_buffer(struct device *dev,
+					    struct device_attribute *attr,
+					    char *buf)
+{
+	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
+	struct st_lsm6dsx_event sevent;
+	int len = 0;
+
+	mutex_lock(&sensor->hw->event_fifo_lock);
+
+	len = kfifo_out(&sensor->hw->event_fifo, &sevent, sizeof(struct st_lsm6dsx_event));
+
+	if( len > 0 ) {
+		len = scnprintf(buf,60, "%s,%d,%llu\n", st_lsm6dsx_event_names[sevent.event],
+			        sevent.extra, sevent.timestamp);
+	}
+
+	mutex_unlock(&sensor->hw->event_fifo_lock);
+
+	return (len != 0? len : -EAGAIN);
+}
+
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_lsm6dsx_sysfs_sampling_frequency_avail);
 
 static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
@@ -795,6 +789,9 @@ static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 
 static IIO_DEVICE_ATTR(in_anglvel_scale_available, 0444,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
+
+static IIO_DEVICE_ATTR(event_pop_buffer, 0444,
+		       st_lsm6dsx_event_pop_buffer, NULL, 0);
 
 static IIO_DEVICE_ATTR(event_tap_en, 0664,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_TAP);
@@ -814,6 +811,10 @@ static IIO_DEVICE_ATTR(event_freefall_en, 0664,
 static IIO_DEVICE_ATTR(event_wakeup_en, 0664,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_WAKEUP);
 
+static IIO_DEVICE_ATTR(event_pedometer_reset, 0220,
+		       NULL, st_lsm6dsx_event_reset_steps, ST_LSM6DSX_PEDOMETER);
+
+
 
 static struct attribute *st_lsm6dsx_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -824,6 +825,8 @@ static struct attribute *st_lsm6dsx_acc_attributes[] = {
 	&iio_dev_attr_event_pedometer_en.dev_attr.attr,
 	&iio_dev_attr_event_freefall_en.dev_attr.attr,
 	&iio_dev_attr_event_wakeup_en.dev_attr.attr,
+	&iio_dev_attr_event_pop_buffer.dev_attr.attr,
+	&iio_dev_attr_event_pedometer_reset.dev_attr.attr,
 	NULL,
 };
 
@@ -836,11 +839,7 @@ static const struct iio_info st_lsm6dsx_acc_info = {
 	.attrs = &st_lsm6dsx_acc_attribute_group,
 	.read_raw = st_lsm6dsx_read_raw,
 	.write_raw = st_lsm6dsx_write_raw,
-	.hwfifo_set_watermark = st_lsm6dsx_set_watermark,
-	.read_event_config = st_lsm6dsx_read_event_config,
-	.write_event_config = st_lsm6dsx_write_event_config,
-	.read_event_value = st_lsm6dsx_read_event_value,
-	.write_event_value = st_lsm6dsx_write_event_value,
+	.hwfifo_set_watermark = st_lsm6dsx_set_watermark
 };
 
 static struct attribute *st_lsm6dsx_gyro_attributes[] = {
@@ -914,12 +913,14 @@ static int st_lsm6dsx_init_device(struct st_lsm6dsx_hw *hw)
 
 	msleep(200);
 
-	/* latch interrupts */
+	/* TODO: For some reason the LIR (latch interrupt) register prevent simultaneous TAP & DTAP detection.
+	 * May be a bug of this driver, to investigate...
 	err = st_lsm6dsx_write_with_mask(hw, ST_LSM6DSX_REG_LIR_ADDR,
 					 ST_LSM6DSX_REG_LIR_MASK, 1);
 	if (err < 0)
 		return err;
-
+	*/
+ 
 	/* enable Block Data Update */
 	err = st_lsm6dsx_write_with_mask(hw, ST_LSM6DSX_REG_BDU_ADDR,
 					 ST_LSM6DSX_REG_BDU_MASK, 1);
@@ -990,11 +991,91 @@ static struct iio_dev *st_lsm6dsx_alloc_iiodev(struct st_lsm6dsx_hw *hw,
 	return iio_dev;
 }
 
+
+static irqreturn_t st_lsm6dsx_handler_irq(int irq, void *private)
+{
+	return IRQ_WAKE_THREAD;
+}
+
+static void push_to_buff(struct st_lsm6dsx_hw *hw, u8 event, u32 extra)
+{
+	struct st_lsm6dsx_event sevent;
+
+	sevent.event = event;
+	sevent.extra = extra;
+	sevent.timestamp = iio_get_time_ns();
+	do_div(sevent.timestamp, 1000);
+
+	kfifo_in(&hw->event_fifo, &sevent, sizeof(struct st_lsm6dsx_event));
+
+
+}
+
+static irqreturn_t st_lsm6dsx_handler_thread(int irq, void *private)
+{
+	struct st_lsm6dsx_hw *hw = private;
+	struct st_lsm6dsx_sensor *sensor = iio_priv(hw->iio_devs[ST_LSM6DSX_ID_ACC]);
+	u16 status = 0;
+	u16 status2 = 0;
+	
+	mutex_lock(&hw->event_fifo_lock);
+	mutex_lock(&hw->lock);
+
+    	status  = 0;
+	if ((sensor->event_mask & (1 << ST_LSM6DSX_TAP)) || (sensor->event_mask & (1 << ST_LSM6DSX_DTAP)))
+		lsm6dsl_get_tap_and_dtap_status( sensor, (u8*) &status, (u8*) &status2 );
+	if (sensor->event_mask & (1 << ST_LSM6DSX_TAP)) {
+		if ( status != 0 ) {
+			
+			push_to_buff(hw, ST_LSM6DSX_TAP, 0);
+		}
+	}
+	if (sensor->event_mask & (1 << ST_LSM6DSX_DTAP)) {
+		if ( status2 != 0 ) {
+			push_to_buff(hw, ST_LSM6DSX_DTAP, 0);
+		}
+	}
+	status = 0;
+	if ((sensor->event_mask & (1 << ST_LSM6DSX_FREEFALL)) && lsm6dsl_get_freefall_status( sensor, (u8*) &status ) == 0 ) {
+		if ( status != 0 ) {
+			push_to_buff(hw, ST_LSM6DSX_FREEFALL, 0);
+		}
+	}
+	status = 0;
+	if ((sensor->event_mask & (1 << ST_LSM6DSX_WAKEUP)) && lsm6dsl_get_wakeup_status( sensor, (u8*) &status ) == 0 ) {
+		if ( status != 0 ) {
+			push_to_buff(hw, ST_LSM6DSX_WAKEUP, 0);
+		}
+	}
+	status = 0;
+	if ((sensor->event_mask & (1 << ST_LSM6DSX_TILT)) && lsm6dsl_get_tilt_status( sensor, (u8*) &status ) == 0 ) {
+		if ( status != 0 ) {
+			push_to_buff(hw, ST_LSM6DSX_TILT, 0);
+		}
+	}
+	status = 0;
+	if ((sensor->event_mask & (1 << ST_LSM6DSX_PEDOMETER)) && lsm6dsl_get_pedometer_status( sensor, (u8*) &status ) == 0 ) {
+		if ( status != 0 ) {
+			lsm6dsl_get_pedometer_step_count( sensor, &status);
+			push_to_buff(hw, ST_LSM6DSX_PEDOMETER, status);
+		}
+	}
+
+	mutex_unlock(&hw->event_fifo_lock);
+	mutex_unlock(&hw->lock);
+
+	return IRQ_HANDLED;
+}
+
+
+
 int st_lsm6dsx_probe(struct device *dev, int irq, int hw_id, const char *name,
 		     const struct st_lsm6dsx_transfer_function *tf_ops)
 {
 	struct st_lsm6dsx_hw *hw;
 	int i, err;
+	int irq_evt = 0;
+	unsigned long irq_type;
 
 	hw = devm_kzalloc(dev, sizeof(*hw), GFP_KERNEL);
 	if (!hw)
@@ -1004,10 +1085,18 @@ int st_lsm6dsx_probe(struct device *dev, int irq, int hw_id, const char *name,
 
 	mutex_init(&hw->lock);
 	mutex_init(&hw->fifo_lock);
+	mutex_init(&hw->event_fifo_lock);
 
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->tf = tf_ops;
+
+	/* Second gpio of the interrupt array is used for getting events on sensor INT1. 
+	 * TODO generalize DTB*/
+	irq_evt = of_irq_get(dev->of_node, 1);
+	if( irq_evt < 0 )
+		return -EINVAL;
+
 
 	err = st_lsm6dsx_check_whoami(hw, hw_id);
 	if (err < 0)
@@ -1029,6 +1118,35 @@ int st_lsm6dsx_probe(struct device *dev, int irq, int hw_id, const char *name,
 			return err;
 	}
 
+	irq_type = irqd_get_trigger_type(irq_get_irq_data(irq_evt));
+
+	switch (irq_type) {
+	case IRQF_TRIGGER_HIGH:
+	case IRQF_TRIGGER_RISING:
+		break;
+	default:
+		dev_info(hw->dev, "mode %lx unsupported\n", irq_type);
+		return -EINVAL;
+	}
+
+	err = devm_request_threaded_irq(hw->dev, irq_evt,
+					st_lsm6dsx_handler_irq,
+					st_lsm6dsx_handler_thread,
+					irq_type | IRQF_ONESHOT,
+					"lsm6dsx", hw);
+	if (err) {
+		dev_err(hw->dev, "failed to request trigger irq %d\n",
+			hw->irq);
+		return err;
+	}
+
+	err = kfifo_alloc(&hw->event_fifo, sizeof(struct st_lsm6dsx_event) * 32, GFP_KERNEL);
+
+	if (err) {
+		dev_err(hw->dev, "failed to request trigger irqfifo alloc");
+		return err;
+	}
+
 	for (i = 0; i < ST_LSM6DSX_ID_MAX; i++) {
 		err = devm_iio_device_register(hw->dev, hw->iio_devs[i]);
 		if (err)
@@ -1039,6 +1157,7 @@ int st_lsm6dsx_probe(struct device *dev, int irq, int hw_id, const char *name,
 }
 EXPORT_SYMBOL(st_lsm6dsx_probe);
 
+MODULE_AUTHOR("Matteo Fumagalli <m.fumagalli@rushup.tech>");
 MODULE_AUTHOR("Lorenzo Bianconi <lorenzo.bianconi@st.com>");
 MODULE_AUTHOR("Denis Ciocca <denis.ciocca@st.com>");
 MODULE_DESCRIPTION("STMicroelectronics st_lsm6dsx driver");

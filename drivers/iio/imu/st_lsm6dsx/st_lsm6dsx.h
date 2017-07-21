@@ -13,6 +13,7 @@
 #define ST_LSM6DSX_H
 
 #include <linux/device.h>
+#include <linux/kfifo.h>
 
 #define ST_LSM6DS3_DEV_NAME	"lsm6ds3"
 #define ST_LSM6DS3H_DEV_NAME	"lsm6ds3h"
@@ -102,6 +103,13 @@ struct st_lsm6dsx_sensor {
 	u32 event_mask;
 };
 
+
+struct st_lsm6dsx_event {
+	u8 event;
+	u32 extra;
+	s64 timestamp;
+};
+
 /**
  * struct st_lsm6dsx_hw - ST IMU MEMS hw instance
  * @dev: Pointer to instance of struct device (I2C or SPI).
@@ -132,6 +140,10 @@ struct st_lsm6dsx_hw {
 	const struct st_lsm6dsx_settings *settings;
 
 	const struct st_lsm6dsx_transfer_function *tf;
+
+	struct mutex event_fifo_lock;
+	struct kfifo event_fifo;
+
 #if defined(CONFIG_SPI_MASTER)
 	struct st_lsm6dsx_transfer_buffer tb;
 #endif /* CONFIG_SPI_MASTER */

@@ -104,7 +104,163 @@
 #define LSM6DSL_TAP_DURATION_TIME_MID_HIGH  0x0C
 #define LSM6DSL_TAP_DURATION_TIME_HIGH      0x0F  /**< Highest value of wake up threshold */
 
-static int LSM6DSL_X_Set_Tap_Quiet_Time( void *handle, uint8_t time )
+static int lsm6dsl_get_wakeup_status( void *handle, u8_t *status )
+{
+
+  LSM6DSL_ACC_GYRO_WU_EV_STATUS_t wake_up_status;
+
+  if ( LSM6DSL_ACC_GYRO_R_WU_EV_STATUS( (void *)handle, &wake_up_status ) == MEMS_ERROR )
+  {
+    return -1;
+  }
+
+  switch( wake_up_status )
+  {
+    case LSM6DSL_ACC_GYRO_WU_EV_STATUS_DETECTED:
+      *status = 1;
+      break;
+    case LSM6DSL_ACC_GYRO_WU_EV_STATUS_NOT_DETECTED:
+      *status = 0;
+      break;
+    default:
+      return -1;
+  }
+
+  return 0;
+}
+
+static int lsm6dsl_get_tilt_status( void *handle, u8_t *status )
+{
+
+  LSM6DSL_ACC_GYRO_TILT_EV_STATUS_t tilt_status;
+
+  if ( LSM6DSL_ACC_GYRO_R_TILT_EV_STATUS( (void *)handle, &tilt_status ) == MEMS_ERROR )
+  {
+    return -1;
+  }
+
+  switch( tilt_status )
+  {
+    case LSM6DSL_ACC_GYRO_TILT_EV_STATUS_DETECTED:
+      *status = 1;
+      break;
+    case LSM6DSL_ACC_GYRO_TILT_EV_STATUS_NOT_DETECTED:
+      *status = 0;
+      break;
+    default:
+      return -1;
+  }
+
+  return 0;
+}
+
+static int lsm6dsl_get_pedometer_step_count( void *handle, u16_t *step_count )
+{
+
+  if ( LSM6DSL_ACC_GYRO_Get_GetStepCounter( (void *)handle, ( u8_t* )step_count ) == MEMS_ERROR )
+  {
+    return -1;
+  }
+
+  return 0;
+}
+
+
+static int lsm6dsl_pedometer_enable_step_reset( void *handle )
+{
+
+  if ( LSM6DSL_ACC_GYRO_W_PedoStepReset( (void *)handle, LSM6DSL_ACC_GYRO_PEDO_RST_STEP_ENABLED ) == MEMS_ERROR )
+  {
+    return -1;
+  }
+
+  return 0;
+}
+
+
+static int lsm6dsl_pedometer_disable_step_reset( void *handle )
+{
+
+  if ( LSM6DSL_ACC_GYRO_W_PedoStepReset( (void *)handle, LSM6DSL_ACC_GYRO_PEDO_RST_STEP_DISABLED ) == MEMS_ERROR )
+  {
+    return -1;
+  }
+
+  return 0;
+}
+
+static int lsm6dsl_get_pedometer_status( void *handle, u8_t *status )
+{
+
+  LSM6DSL_ACC_GYRO_PEDO_EV_STATUS_t pedometer_status;
+
+  if ( LSM6DSL_ACC_GYRO_R_PEDO_EV_STATUS( (void *)handle, &pedometer_status ) == MEMS_ERROR )
+  {
+    return -1;
+  }
+
+  switch( pedometer_status )
+  {
+    case LSM6DSL_ACC_GYRO_PEDO_EV_STATUS_DETECTED:
+      *status = 1;
+      break;
+    case LSM6DSL_ACC_GYRO_PEDO_EV_STATUS_NOT_DETECTED:
+      *status = 0;
+      break;
+    default:
+      return -1;
+  }
+
+  return 0;
+}
+
+static int lsm6dsl_get_freefall_status( void *handle, u8_t *status )
+{
+
+  LSM6DSL_ACC_GYRO_FF_EV_STATUS_t free_fall_status;
+
+  if ( LSM6DSL_ACC_GYRO_R_FF_EV_STATUS( (void *)handle, &free_fall_status ) == MEMS_ERROR )
+  {
+    return -1;
+  }
+
+  switch( free_fall_status )
+  {
+    case LSM6DSL_ACC_GYRO_FF_EV_STATUS_DETECTED:
+      *status = 1;
+      break;
+    case LSM6DSL_ACC_GYRO_FF_EV_STATUS_NOT_DETECTED:
+      *status = 0;
+      break;
+    default:
+      return -1;
+  }
+
+  return 0;
+}
+
+
+
+static int lsm6dsl_get_tap_and_dtap_status( void *handle, u8_t *status_tap, u8_t* status_dtap )
+{
+	u8_t value = 0;
+	if( !LSM6DSL_ACC_GYRO_ReadReg(handle, LSM6DSL_ACC_GYRO_TAP_SRC, (u8_t *)&value, 1) )
+		return -1;
+
+	if(value & LSM6DSL_ACC_GYRO_DOUBLE_TAP_EV_STATUS_MASK)
+		*status_dtap = 1;
+	else
+		*status_dtap = 0;
+
+	if(value & LSM6DSL_ACC_GYRO_SINGLE_TAP_EV_STATUS_MASK)
+		*status_tap = 1;
+	else
+		*status_tap = 0;
+
+	return 0;
+}
+
+static int LSM6DSL_X_Set_Tap_Quiet_Time( void *handle, u8_t time )
 {
 
   if ( LSM6DSL_ACC_GYRO_W_QUIET_Duration( (void *)handle, time ) == MEMS_ERROR )
@@ -115,7 +271,7 @@ static int LSM6DSL_X_Set_Tap_Quiet_Time( void *handle, uint8_t time )
   return 0;
 }
 
-static int LSM6DSL_X_Set_Tap_Shock_Time( void* handle, uint8_t time )
+static int LSM6DSL_X_Set_Tap_Shock_Time( void* handle, u8_t time )
 {
 
   if ( LSM6DSL_ACC_GYRO_W_SHOCK_Duration( (void *)handle, time ) == MEMS_ERROR )
@@ -126,7 +282,7 @@ static int LSM6DSL_X_Set_Tap_Shock_Time( void* handle, uint8_t time )
   return 0;
 }
 
-static int LSM6DSL_X_Set_Tap_Threshold( void* handle, uint8_t thr )
+static int LSM6DSL_X_Set_Tap_Threshold( void* handle, u8_t thr )
 {
 
   if ( LSM6DSL_ACC_GYRO_W_TAP_THS( (void *)handle, thr ) == MEMS_ERROR )
@@ -137,7 +293,7 @@ static int LSM6DSL_X_Set_Tap_Threshold( void* handle, uint8_t thr )
   return 0;
 }
 
-static int LSM6DSL_X_Set_Tap_Duration_Time( void *handle, uint8_t time )
+static int LSM6DSL_X_Set_Tap_Duration_Time( void *handle, u8_t time )
 {
 
   if ( LSM6DSL_ACC_GYRO_W_DUR( (void *)handle, time ) == MEMS_ERROR )
@@ -148,7 +304,7 @@ static int LSM6DSL_X_Set_Tap_Duration_Time( void *handle, uint8_t time )
   return 0;
 }
 
-static int LSM6DSL_X_Set_Pedometer_Threshold( void *handle, uint8_t thr )
+static int LSM6DSL_X_Set_Pedometer_Threshold( void *handle, u8_t thr )
 {
 
   if ( LSM6DSL_ACC_GYRO_W_PedoThreshold( (void *)handle, thr ) == MEMS_ERROR )
