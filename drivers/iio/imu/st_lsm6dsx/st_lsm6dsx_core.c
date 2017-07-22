@@ -227,56 +227,6 @@ static const struct st_lsm6dsx_settings st_lsm6dsx_sensor_settings[] = {
 	},								\
 }
 
-#define ST_LSM6DSX_CHANNEL_EVENT(chan_type, scan_idx)		\
-{									\
-	.type = chan_type,						\
-	.event_spec = st_lsm6dsx_events,				\
-	.num_event_specs = ARRAY_SIZE(st_lsm6dsx_events),		\
-	.scan_index = scan_idx,						\
-	.scan_type = {							\
-		.sign = 's',						\
-		.realbits = 16,						\
-		.storagebits = 16,					\
-		.endianness = IIO_LE,					\
-	},								\
-}
-
-static const struct iio_event_spec st_lsm6dsx_events[] = {
-	{
-		.type = IIO_EV_TYPE_SINGLE_TAP,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate =  BIT(IIO_EV_INFO_VALUE) |
-			BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_DOUBLE_TAP,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_PEDOMETER,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_TILT,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_MOTION,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-	{
-		.type = IIO_EV_TYPE_FREEFALL,
-		.dir = IIO_EV_DIR_NONE,
-		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-	},
-};
-
-
-
 
 static const struct iio_chan_spec st_lsm6dsx_acc_channels[] = {
 	ST_LSM6DSX_CHANNEL(IIO_ACCEL, ST_LSM6DSX_REG_ACC_OUT_X_L_ADDR,
@@ -760,6 +710,32 @@ static ssize_t st_lsm6dsx_event_en_get(struct device *dev,
 	return len;
 }
 
+static ssize_t st_lsm6dsx_event_read_buffer_raw(struct file *file, struct kobject *kobj,
+			      struct bin_attribute *attr, char *buf,
+			      loff_t pos, size_t count)
+{
+	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(kobj_to_dev(kobj)));
+	struct st_lsm6dsx_event sevent;
+	int len = 0;
+	int i;
+	int elem = count/sizeof(struct st_lsm6dsx_event);
+
+	mutex_lock(&sensor->hw->event_fifo_lock);
+
+	for(i=0; i < elem; i++) {
+
+		len = kfifo_out(&sensor->hw->event_fifo, &sevent, sizeof(struct st_lsm6dsx_event));
+
+		if(len > 0) {
+			memcpy(buf + i*elem, &sevent, sizeof(struct st_lsm6dsx_event));
+		}
+	}
+
+	mutex_unlock(&sensor->hw->event_fifo_lock);
+
+	return (elem * sizeof(struct st_lsm6dsx_event));
+}
+
 static ssize_t st_lsm6dsx_event_pop_buffer(struct device *dev,
 					    struct device_attribute *attr,
 					    char *buf)
@@ -790,7 +766,7 @@ static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 static IIO_DEVICE_ATTR(in_anglvel_scale_available, 0444,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
 
-static IIO_DEVICE_ATTR(event_pop_buffer, 0444,
+static IIO_DEVICE_ATTR(event_pop_buffer_dbg, 0444,
 		       st_lsm6dsx_event_pop_buffer, NULL, 0);
 
 static IIO_DEVICE_ATTR(event_tap_en, 0664,
@@ -814,7 +790,8 @@ static IIO_DEVICE_ATTR(event_wakeup_en, 0664,
 static IIO_DEVICE_ATTR(event_pedometer_reset, 0220,
 		       NULL, st_lsm6dsx_event_reset_steps, ST_LSM6DSX_PEDOMETER);
 
-
+static BIN_ATTR(event_read_buffer_raw, 0444,
+		       st_lsm6dsx_event_read_buffer_raw, NULL, 0);
 
 static struct attribute *st_lsm6dsx_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -825,13 +802,19 @@ static struct attribute *st_lsm6dsx_acc_attributes[] = {
 	&iio_dev_attr_event_pedometer_en.dev_attr.attr,
 	&iio_dev_attr_event_freefall_en.dev_attr.attr,
 	&iio_dev_attr_event_wakeup_en.dev_attr.attr,
-	&iio_dev_attr_event_pop_buffer.dev_attr.attr,
 	&iio_dev_attr_event_pedometer_reset.dev_attr.attr,
+	&iio_dev_attr_event_pop_buffer_dbg.dev_attr.attr,
+	NULL,
+};
+
+static struct bin_attribute *st_lsm6dsx_acc_attributes_bin[] = {
+	&bin_attr_event_read_buffer_raw,
 	NULL,
 };
 
 static const struct attribute_group st_lsm6dsx_acc_attribute_group = {
 	.attrs = st_lsm6dsx_acc_attributes,
+	.bin_attrs = st_lsm6dsx_acc_attributes_bin
 };
 
 static const struct iio_info st_lsm6dsx_acc_info = {
@@ -1004,7 +987,6 @@ static void push_to_buff(struct st_lsm6dsx_hw *hw, u8 event, u32 extra)
 	sevent.event = event;
 	sevent.extra = extra;
 	sevent.timestamp = iio_get_time_ns();
-	do_div(sevent.timestamp, 1000);
 
 	kfifo_in(&hw->event_fifo, &sevent, sizeof(struct st_lsm6dsx_event));
 
