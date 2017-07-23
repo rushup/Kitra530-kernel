@@ -430,7 +430,7 @@ static int st_lsm6dsx_get_odr(struct st_lsm6dsx_sensor *sensor)
 	return -EINVAL;
 }
 
-
+/*
 int st_lsm6dsx_sensor_enable(struct st_lsm6dsx_sensor *sensor)
 {
 	int err;
@@ -458,7 +458,7 @@ int st_lsm6dsx_sensor_disable(struct st_lsm6dsx_sensor *sensor)
 	sensor->hw->enable_mask &= ~BIT(id);
 
 	return 0;
-}
+}*/
 
 static int st_lsm6dsx_read_oneshot(struct st_lsm6dsx_sensor *sensor,
 				   u8 addr, int *val)
@@ -491,14 +491,12 @@ static int st_lsm6dsx_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		//ret = iio_device_claim_direct_mode(iio_dev);
-		mutex_lock(&iio_dev->mlock);
+		mutex_lock(&sensor->hw->lock);
 		if (ret)
 			break;
 
 		ret = st_lsm6dsx_read_oneshot(sensor, ch->address, val);
-		mutex_unlock(&iio_dev->mlock);
-		//iio_device_release_direct_mode(iio_dev);
+		mutex_unlock(&sensor->hw->lock);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 
@@ -530,10 +528,8 @@ static int st_lsm6dsx_write_raw(struct iio_dev *iio_dev,
 	struct st_lsm6dsx_sensor *sensor = iio_priv(iio_dev);
 	int err = 0;
 
-	//err = iio_device_claim_direct_mode(iio_dev);
-	mutex_lock(&iio_dev->mlock);
-	//if (err)
-	//	return err;
+	mutex_lock(&sensor->hw->lock);
+
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
@@ -550,8 +546,7 @@ static int st_lsm6dsx_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	//iio_device_release_direct_mode(iio_dev);
-	mutex_unlock(&iio_dev->mlock);
+	mutex_unlock(&sensor->hw->lock);
 
 	return err;
 }
@@ -615,10 +610,14 @@ static ssize_t st_lsm6dsx_event_reset_steps(struct device *dev,
 	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
 	int err;
 
+	mutex_lock(&sensor->hw->lock);
+
 	err = lsm6dsl_pedometer_enable_step_reset(sensor);
 	msleep(10);
 	err = lsm6dsl_pedometer_disable_step_reset(sensor);
 	
+	mutex_unlock(&sensor->hw->lock);
+
 	if(err < 0)
 		return err;
 
@@ -760,37 +759,37 @@ static ssize_t st_lsm6dsx_event_pop_buffer(struct device *dev,
 
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_lsm6dsx_sysfs_sampling_frequency_avail);
 
-static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
+static IIO_DEVICE_ATTR(in_accel_scale_available, S_IRUGO,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
 
-static IIO_DEVICE_ATTR(in_anglvel_scale_available, 0444,
+static IIO_DEVICE_ATTR(in_anglvel_scale_available, S_IRUGO,
 		       st_lsm6dsx_sysfs_scale_avail, NULL, 0);
 
-static IIO_DEVICE_ATTR(event_pop_buffer_dbg, 0444,
+static IIO_DEVICE_ATTR(event_pop_buffer_dbg, S_IRUGO,
 		       st_lsm6dsx_event_pop_buffer, NULL, 0);
 
-static IIO_DEVICE_ATTR(event_tap_en, 0664,
+static IIO_DEVICE_ATTR(event_tap_en, S_IRUGO | S_IWUSR,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_TAP);
 
-static IIO_DEVICE_ATTR(event_dtap_en, 0664,
+static IIO_DEVICE_ATTR(event_dtap_en, S_IRUGO | S_IWUSR,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_DTAP);
 
-static IIO_DEVICE_ATTR(event_tilt_en, 0664,
+static IIO_DEVICE_ATTR(event_tilt_en, S_IRUGO | S_IWUSR,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_TILT);
 
-static IIO_DEVICE_ATTR(event_pedometer_en, 0664,
+static IIO_DEVICE_ATTR(event_pedometer_en, S_IRUGO | S_IWUSR,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_PEDOMETER);
 
-static IIO_DEVICE_ATTR(event_freefall_en, 0664,
+static IIO_DEVICE_ATTR(event_freefall_en, S_IRUGO | S_IWUSR,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_FREEFALL);
 
-static IIO_DEVICE_ATTR(event_wakeup_en, 0664,
+static IIO_DEVICE_ATTR(event_wakeup_en, S_IRUGO | S_IWUSR,
 		       st_lsm6dsx_event_en_get, st_lsm6dsx_event_en_set, ST_LSM6DSX_WAKEUP);
 
-static IIO_DEVICE_ATTR(event_pedometer_reset, 0220,
+static IIO_DEVICE_ATTR(event_pedometer_reset, S_IWUSR,
 		       NULL, st_lsm6dsx_event_reset_steps, ST_LSM6DSX_PEDOMETER);
 
-static BIN_ATTR(event_read_buffer_raw, 0444,
+static BIN_ATTR(event_read_buffer_raw, S_IRUGO,
 		       st_lsm6dsx_event_read_buffer_raw, NULL, 0);
 
 static struct attribute *st_lsm6dsx_acc_attributes[] = {

@@ -45,4 +45,12 @@ config SX9500
 	  To compile this driver as a module, choose M here: the
 	  module will be called sx9500.
 
+config IIO_STMVL53L0X
+	tristate "VL53L0X sensor via iio"
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	depends on I2C
+	help
+	  Say Y here to build a driver for VL53L0X proximity sensor.
+
 endmenu
