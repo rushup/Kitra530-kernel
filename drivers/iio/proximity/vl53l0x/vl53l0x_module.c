@@ -37,9 +37,11 @@ struct vl53l0x_sensor {
 
 int VL53L0X_I2CWrite(VL53L0X_DEV dev, uint8_t *buff, uint8_t len)
 {
+
 	struct i2c_msg msg[1];
 	struct i2c_client *client = (struct i2c_client*) dev->i2c_data;
 	int err = 0;
+
 
 	msg[0].addr = client->addr;
 	msg[0].flags = I2C_M_WR;
@@ -47,8 +49,9 @@ int VL53L0X_I2CWrite(VL53L0X_DEV dev, uint8_t *buff, uint8_t len)
 	msg[0].len = len;
 
 	err = i2c_transfer(client->adapter, msg, 1);
-	/* return the actual messages transfer */
+
 	if (err != 1) {
+		printk("MOMMO FAIL W I2C\n");
 		return STATUS_FAIL;
 	}
 
@@ -57,6 +60,7 @@ int VL53L0X_I2CWrite(VL53L0X_DEV dev, uint8_t *buff, uint8_t len)
 
 int VL53L0X_I2CRead(VL53L0X_DEV dev, uint8_t *buff, uint8_t len)
 {
+
 	struct i2c_msg msg[1];
 	struct i2c_client *client = (struct i2c_client*) dev->i2c_data;
 	int err = 0;
@@ -67,8 +71,9 @@ int VL53L0X_I2CRead(VL53L0X_DEV dev, uint8_t *buff, uint8_t len)
 	msg[0].len = len;
 
 	err = i2c_transfer(client->adapter, &msg[0], 1);
-	/* return the actual mesage transfer */
+
 	if (err != 1) {
+		printk("MOMMO FAIL I2C\n");
 		return STATUS_FAIL;
 	}
 
@@ -88,17 +93,27 @@ static int setup_single_shot(VL53L0X_DEV dev, RangingConfig_e rangingConfig)
 	uint8_t preRangeVcselPeriod = 14;
 	uint8_t finalRangeVcselPeriod = 10;
 
+
+	VL53L0X_DataInit(dev);
+
+printk("MOMMO INIT \n");
+
 	status=VL53L0X_StaticInit(dev);
+printk("MOMMO S1 \n");
 	if( status ){
+		printk("MOMMO S1 ERR\n");
 		return -1;
 	}
 
 	status = VL53L0X_PerformRefCalibration(dev, &VhvSettings, &PhaseCal);
+
+printk("MOMMO S2 %d \n",status);
 	if( status ){
 		return -1;
 	}
 
 	status = VL53L0X_PerformRefSpadManagement(dev, &refSpadCount, &isApertureSpads);
+printk("MOMMO S3 \n");
 	if( status ){
 		return -1;
 	}
@@ -189,25 +204,47 @@ static ssize_t vl53l0x_range_avaiable(struct device *dev,
 }
 
 
+static ssize_t vl53l0x_get_range(struct device *dev,
+					  struct device_attribute *attr,
+					  char *buf)
+{
+	int len;
+	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct vl53l0x_sensor *sensor = iio_priv(indio_dev);
+
+	if(sensor->range_type == HIGH_ACCURACY)
+		len = scnprintf(buf, PAGE_SIZE, "accuracy\n");
+	else if(sensor->range_type == HIGH_SPEED)
+		len = scnprintf(buf, PAGE_SIZE, "speed\n");
+	else if(sensor->range_type == LONG_RANGE)
+		len = scnprintf(buf, PAGE_SIZE, "long\n");
+	else
+		len = -EINVAL;
+
+	return len;
+}
+
+
 static ssize_t vl53l0x_set_range(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t len)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct vl53l0x_sensor *sensor = iio_priv(indio_dev);
-	int err, ret;
+	int err = 0, ret;
 
 	ret = len;
 
 	mutex_lock(&indio_dev->mlock);
 
-	if(strncmp("long", buf, len) == 0) {
+
+	if(strncmp("long", buf, len>4?4:len) == 0) {
 		err = setup_single_shot(sensor->vl53l0x_data, LONG_RANGE);
 	}
-	else if(strncmp("speed", buf, len) == 0) {
+	else if(strncmp("speed", buf, len>5?5:len) == 0) {
 		err = setup_single_shot(sensor->vl53l0x_data, HIGH_SPEED);
 	}
-	else if(strncmp("accuracy", buf, len) == 0) {
+	else if(strncmp("accuracy", buf, len>8?8:len) == 0) {
 		err = setup_single_shot(sensor->vl53l0x_data, HIGH_ACCURACY);
 	}
 	else
@@ -218,7 +255,7 @@ static ssize_t vl53l0x_set_range(struct device *dev,
 
 	mutex_unlock(&indio_dev->mlock);
 
-	return len;
+	return ret;
 }
 
 static int vl53l0x_read_raw(struct iio_dev *iio_dev,
@@ -228,19 +265,23 @@ static int vl53l0x_read_raw(struct iio_dev *iio_dev,
 
 	VL53L0X_RangingMeasurementData_t RangingMeasurementData;
 	struct vl53l0x_sensor *sensor = iio_priv(iio_dev);
-	int ret = 0;
+	int ret = -1;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_PROCESSED:
 
 		mutex_lock(&iio_dev->mlock);
 
-		ret = VL53L0X_PerformSingleRangingMeasurement(sensor->vl53l0x_data,&RangingMeasurementData);
-        if( ret ){
-            ret = -EIO;
-        }
-        else
-        	*val = RangingMeasurementData.RangeMilliMeter;
+		if(sensor->vl53l0x_data->inited == 1)
+			ret = VL53L0X_PerformSingleRangingMeasurement(sensor->vl53l0x_data,
+					&RangingMeasurementData);
+		if( ret ) {
+		    ret = -EIO;
+		}
+        	else {
+        		*val = RangingMeasurementData.RangeMilliMeter;
+			ret = IIO_VAL_INT;		
+		}
 
 		mutex_unlock(&iio_dev->mlock);
 		break;
@@ -281,15 +322,15 @@ static int vl53l0x_write_raw(struct iio_dev *iio_dev,
 		},						\
 	}
 
-static IIO_DEVICE_ATTR(range_avaiable, S_IRUGO,
+static IIO_DEVICE_ATTR(in_proximity_range_avaiable, S_IRUGO,
 		       vl53l0x_range_avaiable, NULL, 0);
 
-static IIO_DEVICE_ATTR(set_range, S_IWUSR,
-			   NULL, vl53l0x_set_range, 0);
+static IIO_DEVICE_ATTR(in_proximity_set_range, S_IWUSR | S_IRUGO,
+			vl53l0x_get_range, vl53l0x_set_range, 0);
 
 static struct attribute *vl53l0x_attributes[] = {
-	&iio_dev_attr_range_avaiable.dev_attr.attr,
-	&iio_dev_attr_set_range.dev_attr.attr,
+	&iio_dev_attr_in_proximity_range_avaiable.dev_attr.attr,
+	&iio_dev_attr_in_proximity_set_range.dev_attr.attr,
 	NULL,
 };
 
@@ -316,7 +357,8 @@ static void vl53l0x_work_handler(struct work_struct *work)
 
 	mutex_lock(data->iio_mutex);
 
-	setup_single_shot(data, HIGH_ACCURACY);
+	if( setup_single_shot(data, HIGH_ACCURACY) == 0)
+		data->inited = 1;
 
 	mutex_unlock(data->iio_mutex);
 
@@ -338,22 +380,26 @@ static int vl53l0x_probe(struct i2c_client *client,
 
 	vl53l0x_data->i2c_data = client;
 
-	iio_dev = devm_iio_device_alloc(&client->dev, sizeof(*sensor));
+	iio_dev = devm_iio_device_alloc(&client->dev, sizeof(struct vl53l0x_sensor));
 	if (!iio_dev)
 		return -ENOMEM;
 
 	sensor = iio_priv(iio_dev);
 	scnprintf(sensor->name,8,"vl53l0x");
+	sensor->range_type = HIGH_ACCURACY;
 	sensor->vl53l0x_data = vl53l0x_data;
 	iio_dev->channels = vl53l0x_channels;
 	iio_dev->num_channels = ARRAY_SIZE(vl53l0x_channels);
 	iio_dev->name = sensor->name;
 	iio_dev->info = &vl53l0x_info;
 	vl53l0x_data->iio_mutex = &iio_dev->mlock;
+	vl53l0x_data->inited = 0;
 
 	err =  devm_iio_device_register(&client->dev, iio_dev);
 
 	INIT_DELAYED_WORK(&vl53l0x_data->dwork, vl53l0x_work_handler);
+
+	schedule_delayed_work(&vl53l0x_data->dwork, 5 * HZ);
 
 	if (err)
 		return err;

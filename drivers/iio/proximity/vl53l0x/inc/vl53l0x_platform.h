@@ -63,11 +63,7 @@ typedef struct {
     void* i2c_data;
     struct delayed_work	dwork;
     struct mutex* iio_mutex;
-
-    /*!< user specific field */
-    uint8_t   I2cDevAddr;                /*!< i2c device address user specific field */
-    uint8_t   comms_type;                /*!< Type of comms : VL53L0X_COMMS_I2C or VL53L0X_COMMS_SPI */
-    uint16_t  comms_speed_khz;           /*!< Comms speed [kHz] : typically 400kHz for I2C           */
+    int inited;
 
 } VL53L0X_Dev_t;
 

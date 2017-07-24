@@ -66,58 +66,12 @@ enum {
 };
 
 
-#ifdef VL53L0X_LOG_ENABLE
 
-#include <linux/module.h>
+#define VL53L0X_ErrLog(...) (void)0
+#define _LOG_FUNCTION_START(module, fmt, ...) (void)0
+#define _LOG_FUNCTION_END(module, status, ...) (void)0
+#define _LOG_FUNCTION_END_FMT(module, status, fmt, ...) (void)0
 
-
-extern uint32_t _trace_level;
-
-
-
-int32_t VL53L0X_trace_config(char *filename, uint32_t modules,
-			uint32_t level, uint32_t functions);
-
-#if 0
-void trace_print_module_function(uint32_t module, uint32_t level,
-			uint32_t function, const char *format, ...);
-#else
-#define trace_print_module_function(...) 
-#endif
-
-#define LOG_GET_TIME() (int)0
-/*
-#define _LOG_FUNCTION_START(module, fmt, ...) \
-		printk(KERN_INFO"beg %s start @%d\t" fmt "\n", \
-		__func__, LOG_GET_TIME(), ##__VA_ARGS__)
-
-#define _LOG_FUNCTION_END(module, status, ...)\
-		printk(KERN_INFO"end %s @%d %d\n", \
-		 __func__, LOG_GET_TIME(), (int)status)
-
-#define _LOG_FUNCTION_END_FMT(module, status, fmt, ...)\
-		printk(KERN_INFO"End %s @%d %d\t"fmt"\n" , \
-		__func__, LOG_GET_TIME(), (int)status, ##__VA_ARGS__)
-*/
-#define _LOG_FUNCTION_START(module, fmt, ...) \
-		pr_err("beg %s start @%d\t" fmt "\n", \
-		__func__, LOG_GET_TIME(), ##__VA_ARGS__)
-
-#define _LOG_FUNCTION_END(module, status, ...)\
-		pr_err("end %s start @%d Status %d\n", \
-		 __func__, LOG_GET_TIME(), (int)status)
-
-#define _LOG_FUNCTION_END_FMT(module, status, fmt, ...)\
-		pr_err("End %s @%d %d\t"fmt"\n" , \
-		__func__, LOG_GET_TIME(), (int)status, ##__VA_ARGS__)
-
-
-#else /* VL53L0X_LOG_ENABLE no logging */
-	#define VL53L0X_ErrLog(...) (void)0
-	#define _LOG_FUNCTION_START(module, fmt, ...) (void)0
-	#define _LOG_FUNCTION_END(module, status, ...) (void)0
-	#define _LOG_FUNCTION_END_FMT(module, status, fmt, ...) (void)0
-#endif /* else */
 
 #define VL53L0X_COPYSTRING(str, ...) strlcpy(str, ##__VA_ARGS__, sizeof(str))
 

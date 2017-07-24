@@ -713,20 +713,28 @@ static ssize_t st_lsm6dsx_event_read_buffer_raw(struct file *file, struct kobjec
 			      struct bin_attribute *attr, char *buf,
 			      loff_t pos, size_t count)
 {
-	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(kobj_to_dev(kobj)));
+	struct device *dev = container_of(kobj, struct device, kobj);
+	struct st_lsm6dsx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
 	struct st_lsm6dsx_event sevent;
 	int len = 0;
 	int i;
 	int elem = count/sizeof(struct st_lsm6dsx_event);
 
+printk("POPPO AAA1 %u \n", kobj);
+printk("POPPO AAAA %d  \n",sensor->watermark);
+printk("POPPO AAAB %d  \n",sensor->hw);
+printk("POPPO AAAC %d  \n",&sensor->hw->event_fifo_lock);
 	mutex_lock(&sensor->hw->event_fifo_lock);
+
+printk("POPPO AAA2\n");
 
 	for(i=0; i < elem; i++) {
 
 		len = kfifo_out(&sensor->hw->event_fifo, &sevent, sizeof(struct st_lsm6dsx_event));
 
 		if(len > 0) {
-			memcpy(buf + i*elem, &sevent, sizeof(struct st_lsm6dsx_event));
+			memcpy(buf + i*sizeof(struct st_lsm6dsx_event), 
+				&sevent, sizeof(struct st_lsm6dsx_event));
 		}
 	}
 
@@ -790,7 +798,7 @@ static IIO_DEVICE_ATTR(event_pedometer_reset, S_IWUSR,
 		       NULL, st_lsm6dsx_event_reset_steps, ST_LSM6DSX_PEDOMETER);
 
 static BIN_ATTR(event_read_buffer_raw, S_IRUGO,
-		       st_lsm6dsx_event_read_buffer_raw, NULL, 0);
+		       st_lsm6dsx_event_read_buffer_raw, NULL, sizeof(struct st_lsm6dsx_event));
 
 static struct attribute *st_lsm6dsx_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -939,6 +947,7 @@ static struct iio_dev *st_lsm6dsx_alloc_iiodev(struct st_lsm6dsx_hw *hw,
 	iio_dev->available_scan_masks = st_lsm6dsx_available_scan_masks;
 
 	sensor = iio_priv(iio_dev);
+
 	sensor->id = id;
 	sensor->hw = hw;
 	sensor->odr = st_lsm6dsx_odr_table[id].odr_avl[0].hz;
@@ -948,6 +957,7 @@ static struct iio_dev *st_lsm6dsx_alloc_iiodev(struct st_lsm6dsx_hw *hw,
 
 	switch (id) {
 	case ST_LSM6DSX_ID_ACC:
+		printk("POPPO ZZZZ %u \n", hw->dev->kobj);
 		iio_dev->channels = st_lsm6dsx_acc_channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsx_acc_channels);
 		iio_dev->info = &st_lsm6dsx_acc_info;
@@ -955,6 +965,10 @@ static struct iio_dev *st_lsm6dsx_alloc_iiodev(struct st_lsm6dsx_hw *hw,
 		sensor->decimator_mask = ST_LSM6DSX_REG_ACC_DEC_MASK;
 		scnprintf(sensor->name, sizeof(sensor->name), "%s_accel",
 			  name);
+
+		//if (device_create_bin_file(hw->dev, &bin_attr_event_read_buffer_raw))
+		//	dev_err(hw->dev, "failed to create binary sysfs entry\n");
+
 		break;
 	case ST_LSM6DSX_ID_GYRO:
 		iio_dev->channels = st_lsm6dsx_gyro_channels;
