@@ -51,7 +51,6 @@ int VL53L0X_I2CWrite(VL53L0X_DEV dev, uint8_t *buff, uint8_t len)
 	err = i2c_transfer(client->adapter, msg, 1);
 
 	if (err != 1) {
-		printk("MOMMO FAIL W I2C\n");
 		return STATUS_FAIL;
 	}
 
@@ -73,7 +72,6 @@ int VL53L0X_I2CRead(VL53L0X_DEV dev, uint8_t *buff, uint8_t len)
 	err = i2c_transfer(client->adapter, &msg[0], 1);
 
 	if (err != 1) {
-		printk("MOMMO FAIL I2C\n");
 		return STATUS_FAIL;
 	}
 
@@ -96,24 +94,20 @@ static int setup_single_shot(VL53L0X_DEV dev, RangingConfig_e rangingConfig)
 
 	VL53L0X_DataInit(dev);
 
-printk("MOMMO INIT \n");
-
 	status=VL53L0X_StaticInit(dev);
-printk("MOMMO S1 \n");
+
 	if( status ){
-		printk("MOMMO S1 ERR\n");
 		return -1;
 	}
 
 	status = VL53L0X_PerformRefCalibration(dev, &VhvSettings, &PhaseCal);
 
-printk("MOMMO S2 %d \n",status);
 	if( status ){
 		return -1;
 	}
 
 	status = VL53L0X_PerformRefSpadManagement(dev, &refSpadCount, &isApertureSpads);
-printk("MOMMO S3 \n");
+
 	if( status ){
 		return -1;
 	}

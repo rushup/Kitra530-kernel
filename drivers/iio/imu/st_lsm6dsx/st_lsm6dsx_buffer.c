@@ -100,6 +100,8 @@ static int st_lsm6dsx_update_decimators(struct st_lsm6dsx_hw *hw)
 	u16 max_odr, min_odr, sip = 0;
 	int err, i;
 	u8 data;
+	u8 reg_decimator = 0;
+	u8 reg_decimator_mask = 0;
 
 	st_lsm6dsx_get_max_min_odr(hw, &max_odr, &min_odr);
 
@@ -108,8 +110,6 @@ static int st_lsm6dsx_update_decimators(struct st_lsm6dsx_hw *hw)
 
 		/* update fifo decimators and sample in pattern */
 		if (hw->enable_mask & BIT(sensor->id)) {
-			if(min_odr == 0 || sensor->odr == 0)
-				return -EINVAL; //if odr not set for both, don't allow
 			sensor->sip = sensor->odr / min_odr;
 			sensor->decimator = max_odr / sensor->odr;
 			data = st_lsm6dsx_get_decimator_val(sensor->decimator);
@@ -119,15 +119,24 @@ static int st_lsm6dsx_update_decimators(struct st_lsm6dsx_hw *hw)
 			data = 0;
 		}
 
-		err = st_lsm6dsx_write_with_mask(hw,
-					ST_LSM6DSX_REG_FIFO_DEC_GXL_ADDR,
-					sensor->decimator_mask, data);
-		if (err < 0)
-			return err;
+		reg_decimator |= ((data << __ffs(sensor->decimator_mask)) & sensor->decimator_mask); 
+		reg_decimator_mask |= sensor->decimator_mask;
+
+
 
 		sip += sensor->sip;
 	}
 	hw->sip = sip;
+
+		
+	err = st_lsm6dsx_write_with_mask(hw,
+				ST_LSM6DSX_REG_FIFO_DEC_GXL_ADDR,
+				reg_decimator_mask, reg_decimator);
+	
+
+	if (err < 0)
+		return err;
+
 
 	return 0;
 }
@@ -323,7 +332,7 @@ static int st_lsm6dsx_update_fifo(struct iio_dev *iio_dev, bool enable)
 {
 	struct st_lsm6dsx_sensor *sensor = iio_priv(iio_dev);
 	struct st_lsm6dsx_hw *hw = sensor->hw;
-	int err;
+	int err = 0;
 
 	if (hw->fifo_mode != ST_LSM6DSX_FIFO_BYPASS) {
 		err = st_lsm6dsx_flush_fifo(hw);
@@ -331,30 +340,20 @@ static int st_lsm6dsx_update_fifo(struct iio_dev *iio_dev, bool enable)
 			return err;
 	}
 
-/* Currently it is enable if odr > 0
-	if (enable) {
-		err = st_lsm6dsx_sensor_enable(sensor);
-		if (err < 0)
-			return err;
-	} else {
-		err = st_lsm6dsx_sensor_disable(sensor);
-		if (err < 0)
-			return err;
-	}
-*/
+	mutex_lock(&hw->fifo_lock);
 
 	err = st_lsm6dsx_update_decimators(hw);
 	if (err < 0)
-		return err;
+		goto end;
 
 	err = st_lsm6dsx_update_watermark(sensor, sensor->watermark);
 	if (err < 0)
-		return err;
+		goto end;
 
 	if (hw->enable_mask) {
 		err = st_lsm6dsx_set_fifo_mode(hw, ST_LSM6DSX_FIFO_CONT);
 		if (err < 0)
-			return err;
+			goto end;
 
 		/*
 		 * store enable buffer timestamp as reference to compute
@@ -363,7 +362,9 @@ static int st_lsm6dsx_update_fifo(struct iio_dev *iio_dev, bool enable)
 		sensor->ts = iio_get_time_ns();
 	}
 
-	return 0;
+	mutex_unlock(&hw->fifo_lock);
+end:
+	return err;
 }
 
 static irqreturn_t st_lsm6dsx_handler_irq(int irq, void *private)

@@ -528,9 +528,6 @@ static int st_lsm6dsx_write_raw(struct iio_dev *iio_dev,
 	struct st_lsm6dsx_sensor *sensor = iio_priv(iio_dev);
 	int err = 0;
 
-	mutex_lock(&sensor->hw->lock);
-
-
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_lsm6dsx_set_full_scale(sensor, val2);
@@ -545,8 +542,6 @@ static int st_lsm6dsx_write_raw(struct iio_dev *iio_dev,
 		err = -EINVAL;
 		break;
 	}
-
-	mutex_unlock(&sensor->hw->lock);
 
 	return err;
 }
@@ -720,13 +715,7 @@ static ssize_t st_lsm6dsx_event_read_buffer_raw(struct file *file, struct kobjec
 	int i;
 	int elem = count/sizeof(struct st_lsm6dsx_event);
 
-printk("POPPO AAA1 %u \n", kobj);
-printk("POPPO AAAA %d  \n",sensor->watermark);
-printk("POPPO AAAB %d  \n",sensor->hw);
-printk("POPPO AAAC %d  \n",&sensor->hw->event_fifo_lock);
 	mutex_lock(&sensor->hw->event_fifo_lock);
-
-printk("POPPO AAA2\n");
 
 	for(i=0; i < elem; i++) {
 
@@ -821,7 +810,7 @@ static struct bin_attribute *st_lsm6dsx_acc_attributes_bin[] = {
 
 static const struct attribute_group st_lsm6dsx_acc_attribute_group = {
 	.attrs = st_lsm6dsx_acc_attributes,
-	.bin_attrs = st_lsm6dsx_acc_attributes_bin
+	//.bin_attrs = st_lsm6dsx_acc_attributes_bin
 };
 
 static const struct iio_info st_lsm6dsx_acc_info = {
@@ -957,7 +946,6 @@ static struct iio_dev *st_lsm6dsx_alloc_iiodev(struct st_lsm6dsx_hw *hw,
 
 	switch (id) {
 	case ST_LSM6DSX_ID_ACC:
-		printk("POPPO ZZZZ %u \n", hw->dev->kobj);
 		iio_dev->channels = st_lsm6dsx_acc_channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsx_acc_channels);
 		iio_dev->info = &st_lsm6dsx_acc_info;
