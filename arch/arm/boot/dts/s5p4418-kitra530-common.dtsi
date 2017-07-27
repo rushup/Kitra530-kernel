@@ -258,6 +258,7 @@
 			status = "okay";
 			#address-cells = <1>;
 			#size-cells = <0>;
+			rate = <400000>;
 
 			lps22hb@5d {
 				compatible = "st,lps22hb-press";
