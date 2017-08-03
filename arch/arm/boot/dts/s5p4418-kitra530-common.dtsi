@@ -252,6 +252,13 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			rate = <400000>;
+
+			vl53l0@29 {
+				compatible = "st,stmvl53l0";
+				reg = <0x29>;
+			};
+
+
 		};
 
 		i2c_1:i2c@c00a5000 {
@@ -290,11 +297,6 @@
 				st,drdy-int-pin = <2>;
 				interrupt-parent = <&gpio_a>;
 				interrupts = <13 IRQ_TYPE_EDGE_RISING>, <9 IRQ_TYPE_EDGE_RISING>;
-			};
-
-			vl53l0@29 {
-				compatible = "st,stmvl53l0";
-				reg = <0x29>;
 			};
 
 
