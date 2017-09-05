@@ -201,28 +201,18 @@
 			snps,reset-gpio = <&gpio_a 12 0>;
 			snps,reset-active-low;
 			snps,reset-delays-us = <0 10000 30000>;
-			phy-mode = "rmii";
-			
 
 			mdio {
 				#address-cells = <1>;
 				#size-cells = <0>;
 
 				ethernet_phy: ethernet-phy@0 {
-					compatible = "micrel,ksz8031";
-					micrel,rmii-reference-clock-select-25-mhz;
-					clocks = <&mdc>;
-					clock-names = "rmii-ref";
-					phy-handle = <&ethernet_phy>;
 					reg = <0>;
+					fixed-link {
+						speed = <100>;
+						full-duplex;
+					};
 				};
-
-			};
-
-			mdc: rmii-ref {
-				#clock-cells = <0>;
-				compatible ="fixed-clock";
-				clock-frequency = <50000000>;
 			};
 		};
 
