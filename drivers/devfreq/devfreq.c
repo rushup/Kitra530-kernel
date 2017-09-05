@@ -27,6 +27,10 @@
 #include <linux/hrtimer.h>
 #include "governor.h"
 
+#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
+extern void nx_bus_qos_update(int val);
+#endif
+
 static struct class *devfreq_class;
 
 /*
@@ -513,6 +517,8 @@ struct devfreq *devfreq_add_device(struct device *dev,
 		goto err_init;
 	}
 
+
+
 	return devfreq;
 
 err_init:
@@ -894,9 +900,7 @@ static ssize_t polling_interval_store(struct device *dev,
 }
 static DEVICE_ATTR_RW(polling_interval);
 
-#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
-extern void nx_bus_qos_update(int val);
-#endif
+
 static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 			      const char *buf, size_t count)
 {
