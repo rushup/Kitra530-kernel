@@ -182,15 +182,15 @@ pinctrl@C0010000 {
 	sdmmc0_cmd: sdmmc0-cmd {
 		nexell,pins = "gpioa-31";
 		nexell,pin-function = <1>;
-		nexell,pin-pull = <2>;
-		nexell,pin-strength = <1>;
+		nexell,pin-pull = <1>;
+		nexell,pin-strength = <2>;
 	};
 
 	sdmmc0_bus4: sdmmc0-bus-width4 {
 		nexell,pins = "gpiob-1", "gpiob-3", "gpiob-5", "gpiob-7";
 		nexell,pin-function = <1>;
-		nexell,pin-pull = <2>;
-		nexell,pin-strength = <1>;
+		nexell,pin-pull = <1>;
+		nexell,pin-strength = <2>;
 	};
 	/* MMC1 */
 	sdmmc1_cclk: sdmmc1-cclk {
