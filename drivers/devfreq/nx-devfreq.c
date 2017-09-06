@@ -508,8 +508,8 @@ static int nx_devfreq_probe(struct platform_device *pdev)
 				      60 * 1000 * 1000);
 
 
-	#if 1
-
+	#if CONFIG_KITRA530
+		/* Micrel PHY works only with bus at max speed */
 		nx_devfreq->devfreq->min_freq = 400000;
 		#ifndef CONFIG_ARM_S5Pxx18_DEVFREQ
 			update_devfreq(nx_devfreq->devfreq);
