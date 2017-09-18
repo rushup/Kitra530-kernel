@@ -213,6 +213,9 @@ menu "Kernel Features"
 
 menu "ARM errata workarounds via the alternatives framework"
 
+config KITRA710C
+	bool "Kitra710C support"
+
 config ARM64_ERRATUM_826319
 	bool "Cortex-A53: 826319: System might deadlock if a write cannot complete until read data is accepted"
 	default y
