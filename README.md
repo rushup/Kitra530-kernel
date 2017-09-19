@@ -5,10 +5,12 @@
 3. [Update guide](#3-update-guide)
 
 ## 1. Introduction
-Fork from 'linux-artik' repository adding Kitra530 support.
+Fork from 'linux-artik' repository adding Kitra530 and Kitra710C support.
 
 ## 2. Build guide
 ### 2.1 Install cross compiler
+
+#### For Kitra530
 
 ```
 sudo apt-get install gcc-arm-linux-gnueabihf
@@ -19,6 +21,20 @@ wget http://releases.linaro.org/components/toolchain/binaries/latest-5/arm-linux
 tar xf gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf.tar.xz
 export PATH=~/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf/bin:$PATH
 ```
+
+#### For Kitra710C
+
+You'll need an arm64 cross compiler
+```
+sudo apt-get install gcc-aarch64-linux-gnu
+```
+If you can't install the above toolchain, you can use linaro toolchain.
+```
+wget https://releases.linaro.org/components/toolchain/binaries/5.4-2017.05/aarch64-linux-gnu/gcc-linaro-5.4.1-2017.05-x86_64_aarch64-linux-gnu.tar.xz
+tar xf gcc-linaro-5.4.1-2017.05-x86_64_aarch64-linux-gnu.tar.xz
+export PATH=~/gcc-linaro-5.4.1-2017.05-x86_64_aarch64-linux-gnu/bin:$PATH
+```
+
 You can the path permernently through adding it into ~/.bashrc
 
 ### 2.2 Install android-fs-tools
