@@ -527,6 +527,19 @@ static int nx_devfreq_probe(struct platform_device *pdev)
 	pm_qos_update_request_timeout(&nx_bus_qos, NX_BUS_CLK_HIGH_KHZ,
 				      60 * 1000 * 1000);
 
+	#if defined(CONFIG_MICREL_PHY)
+		/* Micrel PHY works only with bus at max speed */
+		nx_devfreq->devfreq->min_freq = 400000;
+		#ifndef CONFIG_ARM_S5Pxx18_DEVFREQ
+			update_devfreq(nx_devfreq->devfreq);
+		#endif
+
+		#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
+			nx_bus_qos_update(400000);
+		#endif
+
+	#endif
+
 	return 0;
 }
 
