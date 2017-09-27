@@ -53,6 +53,35 @@
 #include "stmmac.h"
 #include <linux/reset.h>
 #include <linux/of_mdio.h>
+#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
+#include <linux/pm_qos.h>
+#include <linux/soc/nexell/cpufreq.h>
+#include <linux/workqueue.h>
+#endif
+
+#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
+#define QOS_REQUEST_TIMEOUT_US	100000 /* 100 milliseconds */
+static struct pm_qos_request nx_net_qos;
+
+static void nx_net_qos_update(int val, int timeout)
+{
+	if (!pm_qos_request_active(&nx_net_qos))
+		pm_qos_add_request(&nx_net_qos, PM_QOS_BUS_THROUGHPUT, val);
+	else
+		pm_qos_update_request_timeout(&nx_net_qos, val,
+					      timeout);
+}
+
+static void qos_request_work(struct work_struct *work)
+{
+	struct stmmac_priv *priv = container_of(work, struct stmmac_priv,
+						qos_work);
+	int timeout = priv->plat->boost_busfreq_timeout ? :
+		QOS_REQUEST_TIMEOUT_US;
+
+	nx_net_qos_update(NX_BUS_CLK_HIGH_KHZ, timeout);
+}
+#endif
 
 #define STMMAC_ALIGN(x)	L1_CACHE_ALIGN(x)
 
@@ -1469,6 +1498,10 @@ static void stmmac_dma_interrupt(struct stmmac_priv *priv)
 			stmmac_disable_dma_irq(priv);
 			__napi_schedule(&priv->napi);
 		}
+#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
+		if (priv->plat->boost_busfreq)
+			schedule_work(&priv->qos_work);
+#endif
 	}
 	if (unlikely(status & tx_hard_error_bump_tc)) {
 		/* Try to bump up the dma threshold on this failure */
@@ -1870,6 +1903,10 @@ static int stmmac_open(struct net_device *dev)
 
 	napi_enable(&priv->napi);
 	netif_start_queue(dev);
+
+#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
+	INIT_WORK(&priv->qos_work, qos_request_work);
+#endif
 
 	return 0;
 
@@ -3011,6 +3048,11 @@ int stmmac_dvr_remove(struct net_device *ndev)
 
 	priv->hw->dma->stop_rx(priv->ioaddr);
 	priv->hw->dma->stop_tx(priv->ioaddr);
+
+#ifdef CONFIG_ARM_S5Pxx18_DEVFREQ
+	if (pm_qos_request_active(&nx_net_qos))
+		pm_qos_remove_request(&nx_net_qos);
+#endif
 
 	stmmac_set_mac(priv->ioaddr, false);
 	netif_carrier_off(ndev);

@@ -783,7 +783,9 @@ dtb-$(CONFIG_ARCH_S5P4418) += \
 	s5p4418-artik530-raptor-rev03.dtb \
 	s5p4418-artik530-explorer.dtb \
 	s5p4418-artik533-raptor-rev00.dtb \
-	s5p4418-artik305-raptor-rev00.dtb
+	s5p4418-artik305-raptor-rev00.dtb \
+	s5p4418-artik305-raptor-rev04.dtb \
+	s5p4418-artik305-explorer.dtb
 dtb-$(CONFIG_KITRA530) += s5p4418-kitra530.dtb
 endif
 
