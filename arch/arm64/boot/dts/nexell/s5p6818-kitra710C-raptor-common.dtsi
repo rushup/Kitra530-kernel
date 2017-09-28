@@ -159,6 +159,9 @@
 			snps,reset-active-low;
 			snps,reset-delays-us = <0 10000 30000>;
 			phy-mode = "rmii";
+
+			boost-busfreq;
+			boost-busfreq-timeout = <100000>;
 			
 
 			mdio {
